@@ -30,7 +30,12 @@ namespace HW3_Zookeeper
 
         public void Process(WatchedEvent @event)
         {
-            throw new NotImplementedException();
+            if (@event.Type == EventType.NodeCreated)
+            {
+            }
+            
+            int i = 1;
+            //throw new NotImplementedException();
         }
 
         public void join(String alliance, String airline, String url)
