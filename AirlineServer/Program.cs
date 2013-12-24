@@ -27,11 +27,8 @@ namespace AirlineServer
 
                     // TODO -join cluster
                     airlineServer.joinCluster();
-                    if (airlineServer.isDelegate())
-                    {
-                        airlineServer.registerDelegate("http://" + LocalIPAddress() + ":" + airlineServer.searchPort + "/services");
-                    }
-
+                    airlineServer.registerDelegate("http://" + LocalIPAddress() + ":" + airlineServer.searchPort + "/services");
+                    
 
                     // old- hw1
                     //airlineServer.registerSeller("http://" + LocalIPAddress() + ":" + args[0] + "/services");

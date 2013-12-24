@@ -57,9 +57,14 @@ namespace HW1c
         public Flights(List<Flight> flights) : base(flights) { }
     }
 
+
     [DataContract]
     public class AllianceDelegate
     {
+        [DataMember]
+        public Boolean isDelegate { get; set; }
+        [DataMember]
+        public String AirlineName { get; set; }
         [DataMember]
         public String AllianceName { get; set; }
         [DataMember]

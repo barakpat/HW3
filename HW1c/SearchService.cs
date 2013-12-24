@@ -14,7 +14,7 @@ namespace HW1c
     public class SearchService : ISearchService
     {
         
-        public Flights GetFlights(String src, String dst, String date)
+        public Flights GetFlights(String src, String dst, String date, Airlines airlines)
         {
             Flights res = new Flights();
             Console.WriteLine("getFlights src=" + src);

@@ -45,9 +45,13 @@ namespace Client
                             continue;
                         }
                         Flights flights =null;
+                        Airlines airlines = new Airlines();
+                        
+                        airlines.Add("KLM");
+                        
                         try
                         {
-                            flights = channel.GetFlights(src, dst, date.ToString(dateFormat));
+                            flights = channel.GetFlights(src, dst, date.ToString(dateFormat), airlines);
                         }
                         catch(Exception e){
                             continue;
@@ -84,72 +88,7 @@ namespace Client
 
 
                     }
-                    else if (words[0] == "reserve")
-                    {
-                        Reservation r = new Reservation();
-                        try
-                        {
-                            r.Seller = words[1];
-                            r.FNum = words[2];
-                            r.Date = DateTime.ParseExact(words[3], dateFormat, CultureInfo.InvariantCulture);
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine("Failed, Invalid Input");
-                            continue;
-                        }
-                        
-                        try
-                        {
-                            int id = channel.makeReservation(r);
-                            Console.WriteLine("OK, reservation ID: " + id);
-                        }
-                        catch (Exception e)
-                        {
-                            if (e.InnerException is WebException)
-                            {
-                                HttpWebResponse resp = (HttpWebResponse)((WebException)e.InnerException).Response;
-                                Console.WriteLine("Failed, " + resp.StatusDescription);
-                            }
-                            else
-                            {
-                                Console.WriteLine("Failed, " + e.Message);
-                            }
-                        }
-                    }
-                    else if (words[0] == "cancel")
-                    {
-                        Reservation r = new Reservation();
-                        try
-                        {
-                            r.Seller = words[1];
-                            r.Id = Convert.ToInt32(words[2]);
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine("Failed, Invalid Input");
-                            continue;
-                        }
-
-                        try
-                        {
-                            channel.makeCancelation(r.Seller, Convert.ToString(r.Id));
-                            Console.WriteLine("OK");
-                        }
-                        catch (Exception e)
-                        {
-                            if (e.InnerException is WebException)
-                            {
-                                HttpWebResponse resp = (HttpWebResponse)((WebException)e.InnerException).Response;
-                                Console.WriteLine("Failed, " + resp.StatusDescription);
-                            }
-                            else
-                            {
-                                Console.WriteLine("Failed, " + e.Message);
-                            }
-                        }                        
-                    }
-                    else
+                   else
                     {
                         Console.WriteLine("Failed, Invalid Input");
                     }

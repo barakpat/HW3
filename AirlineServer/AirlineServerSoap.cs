@@ -137,6 +137,8 @@ namespace AirlineServer
         public void registerDelegate(string URI)
         {
             AllianceDelegate allianceDelegate = new AllianceDelegate();
+            allianceDelegate.isDelegate = this.distributer.isDelegate();
+            allianceDelegate.AirlineName = this.airline;
             allianceDelegate.AllianceName = this.alliance;
             allianceDelegate.Port = this.searchPort;
             allianceDelegate.ServiceURI = new Uri(URI + "/AirlineServerSoap");

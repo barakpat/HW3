@@ -21,18 +21,25 @@ namespace HW1c
                 WebOperationContext.Current.OutgoingResponse.StatusDescription = "Allience must be an Allience Object with AllienceName not empty (i.e 'elal') and ServiceURI is a URI (i.e http://localhost:8200/services/TicketSellingServerSoap)";
                 return false;
             }
-            ServiceEndpoint httpEndpoint =
-               new ServiceEndpoint(
-               ContractDescription.GetContract(
-               typeof(IAirlineServerSoap)),
-               new BasicHttpBinding(),
-               new EndpointAddress
-               (allienceDelegate.ServiceURI));
-            //// create channel factory based on HTTP endpoint
-            ChannelFactory<IAirlineServerSoap> channelFactory = new ChannelFactory<IAirlineServerSoap>(httpEndpoint);
-            IAirlineServerSoap channel = channelFactory.CreateChannel();
-            // adding the seller name and the channel factory
-            TicketServerList.ticketServersProxies.AddOrUpdate(allienceDelegate.AllianceName, channel, (key, oldVal) => channel);
+
+            TicketServerList.airlineToServer.AddOrUpdate(allienceDelegate.AirlineName, allienceDelegate.AllianceName, (key, oldVal) => allienceDelegate.AllianceName);
+            
+            // if airline is  delegate  
+            if (allienceDelegate.isDelegate)
+            {
+                ServiceEndpoint httpEndpoint =
+                   new ServiceEndpoint(
+                   ContractDescription.GetContract(
+                   typeof(IAirlineServerSoap)),
+                   new BasicHttpBinding(),
+                   new EndpointAddress
+                   (allienceDelegate.ServiceURI));
+                //// create channel factory based on HTTP endpoint
+                ChannelFactory<IAirlineServerSoap> channelFactory = new ChannelFactory<IAirlineServerSoap>(httpEndpoint);
+                IAirlineServerSoap channel = channelFactory.CreateChannel();
+                // adding the seller name and the channel factory
+                TicketServerList.ticketServersProxies.AddOrUpdate(allienceDelegate.AllianceName, channel, (key, oldVal) => channel);
+            }
 
             WebOperationContext.Current.OutgoingResponse.StatusCode = System.Net.HttpStatusCode.Created;
             return true;
