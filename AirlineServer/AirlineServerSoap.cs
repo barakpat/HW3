@@ -21,17 +21,21 @@ namespace AirlineServer
         List<ServerFlight> flights = new List<ServerFlight>();
         Dictionary<int, String> reservations = new Dictionary<int, String>();
         int reservationId = 0;
-        String seller;
-        String port;
+        String airline;
+        String alliance;
+        String searchPort;
+        String alliancePort;
         WebChannelFactory<ISellerService> proxy;
         ISellerService channel;
         public AirlineServerSoap(string[] args)
         {
-            this.seller = args[3];
-            this.port = args[0];
-            this.proxy = new WebChannelFactory<ISellerService>(new Uri(args[1]));
+            this.airline = args[0];
+            this.alliance = args[1];
+            this.searchPort = args[2];
+            this.alliancePort = args[3];
+            this.proxy = new WebChannelFactory<ISellerService>(new Uri(args[4]));
             this.channel = this.proxy.CreateChannel();
-            this.initializeFlights(args[2]);
+            this.initializeFlights(args[5]);
            // this.registerSeller(args);
         }
 
@@ -40,7 +44,7 @@ namespace AirlineServer
             using (
                     new OperationContextScope((IContextChannel)this.channel))
             {
-                bool r = this.channel.unregisterServer(this.seller);
+                bool r = this.channel.unregisterServer(this.airline);
             }
             Console.WriteLine("unregister from search server");
         }
@@ -53,8 +57,8 @@ namespace AirlineServer
         {
 
             TicketServer newTs = new TicketServer();
-            newTs.ServerName = this.seller;
-            newTs.Port = this.port;
+            newTs.ServerName = this.airline;
+            newTs.Port = this.searchPort;
             newTs.ServiceURI = new Uri(URI + "/TicketSellingServerSoap");
             using (
                     new OperationContextScope((IContextChannel)this.channel))
@@ -78,7 +82,7 @@ namespace AirlineServer
             {
                 String[] words = line.Split();
                 f = new ServerFlight();
-                f.Seller = this.seller;
+                f.Seller = this.airline;
                 f.FNum = words[0];
                 f.Src = words[1];
                 f.Dst = words[2];
