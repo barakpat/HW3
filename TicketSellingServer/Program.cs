@@ -34,6 +34,7 @@ namespace TicketSellingServer
             }
             catch(Exception e){
                 Console.WriteLine("Server has crushed, probably the parameters are wrong :(");
+                Console.WriteLine(e);
             }
 
         }
