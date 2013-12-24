@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 namespace HW1c
 {
     
+
+
     [DataContract] public class Flight {
         public Flight() {}
         public Flight(Flight f)
