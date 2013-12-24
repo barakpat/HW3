@@ -47,6 +47,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AirlineServerSoap.cs" />
     <Compile Include="datatypes.cs" />
     <Compile Include="ISearchService.cs" />
     <Compile Include="ISellerService.cs" />

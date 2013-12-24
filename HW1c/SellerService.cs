@@ -12,27 +12,27 @@ namespace HW1c
 {
     class SellerService : ISellerService
     {
-        public bool registerServer(TicketServer ticketServer)
+        public bool registerServer(AllianceDelegate allienceDelegate)
         {
 
-            if (ticketServer == null || ticketServer.ServiceURI == null || ticketServer.ServiceURI.Equals("") || ticketServer.ServerName == null || ticketServer.ServerName.Equals(""))
+            if (allienceDelegate == null || allienceDelegate.ServiceURI == null || allienceDelegate.ServiceURI.Equals("") || allienceDelegate.AllianceName == null || allienceDelegate.AllianceName.Equals(""))
             {
                 WebOperationContext.Current.OutgoingResponse.StatusCode = System.Net.HttpStatusCode.BadRequest;
-                WebOperationContext.Current.OutgoingResponse.StatusDescription = "ticketServer must be a TicketServer Object with ServerName not empty (i.e 'elal') and ServiceURI is a URI (i.e http://localhost:8200/services/TicketSellingServerSoap)";
+                WebOperationContext.Current.OutgoingResponse.StatusDescription = "Allience must be an Allience Object with AllienceName not empty (i.e 'elal') and ServiceURI is a URI (i.e http://localhost:8200/services/TicketSellingServerSoap)";
                 return false;
             }
             ServiceEndpoint httpEndpoint =
                new ServiceEndpoint(
                ContractDescription.GetContract(
-               typeof(ITicketSellingServerSoap)),
+               typeof(IAirlineServerSoap)),
                new BasicHttpBinding(),
                new EndpointAddress
-               (ticketServer.ServiceURI));
+               (allienceDelegate.ServiceURI));
             //// create channel factory based on HTTP endpoint
-            ChannelFactory<ITicketSellingServerSoap> channelFactory = new ChannelFactory<ITicketSellingServerSoap>(httpEndpoint);
-            ITicketSellingServerSoap channel = channelFactory.CreateChannel();
+            ChannelFactory<IAirlineServerSoap> channelFactory = new ChannelFactory<IAirlineServerSoap>(httpEndpoint);
+            IAirlineServerSoap channel = channelFactory.CreateChannel();
             // adding the seller name and the channel factory
-            TicketServerList.ticketServersProxies.AddOrUpdate(ticketServer.ServerName, channel, (key, oldVal) => channel);
+            TicketServerList.ticketServersProxies.AddOrUpdate(allienceDelegate.AllianceName, channel, (key, oldVal) => channel);
 
             WebOperationContext.Current.OutgoingResponse.StatusCode = System.Net.HttpStatusCode.Created;
             return true;
@@ -47,7 +47,7 @@ namespace HW1c
                 return false;
             }
             
-            ITicketSellingServerSoap channel;
+            IAirlineServerSoap channel;
             if (!TicketServerList.ticketServersProxies.TryRemove(serverName, out channel))
             {
                 WebOperationContext.Current.OutgoingResponse.SetStatusAsNotFound("unknown seller");

@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-   
+  /*
     
 [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "3.0.0.0")]
 [System.ServiceModel.ServiceContractAttribute(ConfigurationName="ITicketSellingServerSoap")]
@@ -74,3 +74,4 @@ public partial class TicketSellingServerSoapClient : System.ServiceModel.ClientB
         base.Channel.Cancel(id);
     }
 }
+   */

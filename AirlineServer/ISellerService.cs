@@ -14,7 +14,7 @@ namespace HW1c
         [OperationContract]
         [WebInvoke(Method = "POST", UriTemplate = "ticketSetvers",
              BodyStyle = WebMessageBodyStyle.Wrapped)]
-        bool registerServer(TicketServer ticketServer);
+        bool registerServer(AllianceDelegate ticketServer);
 
         [OperationContract]
         [WebInvoke(Method = "DELETE", UriTemplate = "ticketSetvers/{seller}",

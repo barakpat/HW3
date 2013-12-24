@@ -61,8 +61,8 @@ namespace AirlineServer
         public void registerSeller(string URI)
         {
 
-            TicketServer newTs = new TicketServer();
-            newTs.ServerName = this.airline;
+            AllianceDelegate newTs = new AllianceDelegate();
+            newTs.AllianceName = this.airline;
             newTs.Port = this.searchPort;
             newTs.ServiceURI = new Uri(URI + "/TicketSellingServerSoap");
             using (
@@ -120,9 +120,18 @@ namespace AirlineServer
             //throw new NotImplementedException();
         }
 
-        public void registerDelegate(string p)
+        public void registerDelegate(string URI)
         {
-            //throw new NotImplementedException();
+            AllianceDelegate allianceDelegate = new AllianceDelegate();
+            allianceDelegate.AllianceName = this.alliance;
+            allianceDelegate.Port = this.searchPort;
+            allianceDelegate.ServiceURI = new Uri(URI + "/AirlineServerSoap");
+            using (
+                    new OperationContextScope((IContextChannel)this.channel))
+            {
+                bool r = this.channel.registerServer(allianceDelegate);
+            }
+            Console.WriteLine("register to search server");
         }
     }
 }

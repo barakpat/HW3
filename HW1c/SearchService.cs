@@ -81,7 +81,7 @@ namespace HW1c
             
             Console.WriteLine("reservation = " + reservation.Seller + " " + reservation.FNum + " " + reservation.Date);
 
-            ITicketSellingServerSoap ts= null;
+            IAirlineServerSoap ts= null;
             if (!TicketServerList.ticketServersProxies.TryGetValue(reservation.Seller, out ts))
             {
                 WebOperationContext.Current.OutgoingResponse.SetStatusAsNotFound("unknown seller");
@@ -94,7 +94,7 @@ namespace HW1c
                 using (
                     new OperationContextScope((IContextChannel)ts))
                 {
-                    id = ts.Reserve(reservation);
+                   // id = ts.Reserve(reservation);
                 }
             }
             catch (FaultException e)
@@ -125,7 +125,7 @@ namespace HW1c
                 return;
             }
             
-            ITicketSellingServerSoap ts = null;
+            IAirlineServerSoap ts = null;
             if (!TicketServerList.ticketServersProxies.TryGetValue(seller, out ts))
             {
                 WebOperationContext.Current.OutgoingResponse.SetStatusAsNotFound("unknown seller");
@@ -136,7 +136,7 @@ namespace HW1c
                 using (
                     new OperationContextScope((IContextChannel)ts))
                 {
-                    ts.Cancel(myId);
+                    //ts.Cancel(myId);
                 }
             }
             catch (FaultException e)

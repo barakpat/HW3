@@ -29,14 +29,14 @@ namespace AirlineServer
                     airlineServer.joinCluster();
                     if (airlineServer.isDelegate())
                     {
-                        airlineServer.registerDelegate("http://" + LocalIPAddress() + ":" + args[0] + "/services");
+                        airlineServer.registerDelegate("http://" + LocalIPAddress() + ":" + airlineServer.searchPort + "/services");
                     }
 
 
                     // old- hw1
                     //airlineServer.registerSeller("http://" + LocalIPAddress() + ":" + args[0] + "/services");
 
-                    Console.WriteLine("Ticket selling server,' " + args[3] + "', is up and running listenning to port " + args[0]);
+                    Console.WriteLine("Airline server,' " + airlineServer.airline + "', is up and running listenning to port " + airlineServer.searchPort);
                     Console.ReadKey();
 
                    //TODO - leave cluster

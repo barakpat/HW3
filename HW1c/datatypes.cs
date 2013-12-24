@@ -58,10 +58,10 @@ namespace HW1c
     }
 
     [DataContract]
-    public class TicketServer
+    public class AllianceDelegate
     {
         [DataMember]
-        public String ServerName { get; set; }
+        public String AllianceName { get; set; }
         [DataMember]
         public String Port { get; set; }
         [DataMember]

@@ -10,7 +10,7 @@ namespace HW1c
 {
     class TicketServerList
     {
-        static public ConcurrentDictionary<string, ITicketSellingServerSoap> ticketServersProxies =
-        new ConcurrentDictionary<string, ITicketSellingServerSoap>();
+        static public ConcurrentDictionary<string, IAirlineServerSoap> ticketServersProxies =
+        new ConcurrentDictionary<string, IAirlineServerSoap>();
     }
 }
