@@ -18,7 +18,7 @@ namespace AirlineServer
             {
                 AirlineServerSoap airlineServer = new AirlineServerSoap(args);
                 using (ServiceHost host = new ServiceHost(
-                    airlineServer, new Uri("http://localhost:" + args[0] + "/services")))
+                    airlineServer, new Uri("http://localhost:" + airlineServer.searchPort + "/services")))
                 {
                     var behaviour = host.Description.Behaviors.Find<ServiceBehaviorAttribute>();
                     behaviour.InstanceContextMode = InstanceContextMode.Single;
