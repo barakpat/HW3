@@ -22,6 +22,20 @@ namespace AirlineServer
         List<ServerFlight> flights = new List<ServerFlight>();
         Dictionary<int, String> reservations = new Dictionary<int, String>();
         //int reservationId = 0;
+
+        public String IP
+        {
+            get { return Program.LocalIPAddress(); }
+        }
+        public String SearchUri
+        {
+            get { return "http://" + IP + ":" + searchPort + "/services"; }
+        }
+        public String AllienceUri
+        {
+            get { return "http://" + IP + ":" + alliancePort + "/services"; }
+        }
+
         public String airline { get; set; }
         public String alliance { get; set; }
         public String searchPort { get; set; }
@@ -55,7 +69,7 @@ namespace AirlineServer
         }
 
         public bool isDelegate() {
-            return true;
+            return this.distributer.isDelegate();
         }
 
         public void registerSeller(string URI)
@@ -117,7 +131,7 @@ namespace AirlineServer
 
         public void joinCluster()
         {
-            //throw new NotImplementedException();
+            this.distributer.join(this.alliance,this.airline,this.AllienceUri);
         }
 
         public void registerDelegate(string URI)
