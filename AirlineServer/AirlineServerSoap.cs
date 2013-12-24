@@ -45,6 +45,10 @@ namespace AirlineServer
             Console.WriteLine("unregister from search server");
         }
 
+        public bool isDelegate() {
+            return true;
+        }
+
         public void registerSeller(string URI)
         {
 
@@ -100,6 +104,16 @@ namespace AirlineServer
             }            
             Console.WriteLine("Search: " + "src: " + src + " " + "dst: " + dst + " " + "date: " + date + " ");
             return resFlights;
+        }
+
+        public void joinCluster()
+        {
+            //throw new NotImplementedException();
+        }
+
+        public void registerDelegate(string p)
+        {
+            //throw new NotImplementedException();
         }
     }
 }

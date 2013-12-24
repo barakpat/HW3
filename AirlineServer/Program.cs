@@ -26,6 +26,12 @@ namespace AirlineServer
                     host.Open();
 
                     // TODO -join cluster
+                    airlineServer.joinCluster();
+                    if (airlineServer.isDelegate())
+                    {
+                        airlineServer.registerDelegate("http://" + LocalIPAddress() + ":" + args[0] + "/services");
+                    }
+
 
                     // old- hw1
                     //airlineServer.registerSeller("http://" + LocalIPAddress() + ":" + args[0] + "/services");
