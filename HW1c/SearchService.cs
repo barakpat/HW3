@@ -42,6 +42,10 @@ namespace HW1c
                 {
                     Console.WriteLine("service failed: {0}", e.Reason);
                 }
+                catch (Exception e)
+                {
+
+                }
             }
 
             return res; 

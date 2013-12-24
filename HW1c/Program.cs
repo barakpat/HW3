@@ -20,6 +20,9 @@ namespace HW1c
             sellerhost.Open();
 
             Console.ReadKey();
+
+            clienthost.Close();
+            sellerhost.Close();
         }
     }
 }

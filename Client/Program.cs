@@ -15,6 +15,7 @@ namespace Client
     class Program
     {
         static String dateFormat = "dd/MM/yyyy";
+
         static void Main(string[] args)
         {
             WebChannelFactory<ISearchService> cf = new WebChannelFactory<ISearchService>(new Uri(args[0]));
@@ -66,7 +67,10 @@ namespace Client
 
                         });
 
-                        if (!flights.Any())
+                        flights = new Flights(flights.Where(f => f.AvailableSeats > 0).ToList());
+
+
+                        if (!flights.Any() )
                         {
                             Console.WriteLine("No flights available");
                         }
