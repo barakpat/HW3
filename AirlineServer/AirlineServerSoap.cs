@@ -1,4 +1,5 @@
 ﻿using HW1c;
+using HW3_Zookeeper;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -20,11 +21,12 @@ namespace AirlineServer
         // in-memory resource collections
         List<ServerFlight> flights = new List<ServerFlight>();
         Dictionary<int, String> reservations = new Dictionary<int, String>();
-        int reservationId = 0;
-        String airline;
-        String alliance;
-        String searchPort;
-        String alliancePort;
+        //int reservationId = 0;
+        public String airline { get; set; }
+        public String alliance { get; set; }
+        public String searchPort { get; set; }
+        public String alliancePort { get; set; }
+        public Distributer distributer { get; set; }
         WebChannelFactory<ISellerService> proxy;
         ISellerService channel;
         public AirlineServerSoap(string[] args)
@@ -36,9 +38,12 @@ namespace AirlineServer
             this.proxy = new WebChannelFactory<ISellerService>(new Uri(args[4]));
             this.channel = this.proxy.CreateChannel();
             this.initializeFlights(args[5]);
+
+            distributer = new Distributer();
            // this.registerSeller(args);
         }
 
+        
 
         public void unregisterFromServer(){
             using (

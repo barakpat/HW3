@@ -54,6 +54,16 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\HW3_Zookeeper\HW3_Zookeeper.csproj">
+      <Project>{04c55dd9-08bc-4b57-8cb7-122d5b037c65}</Project>
+      <Name>HW3_Zookeeper</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ZooKeeperNet\ZooKeeperNet.csproj">
+      <Project>{5c6774fb-2350-46b2-b1df-1ccc757c7727}</Project>
+      <Name>ZooKeeperNet</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
