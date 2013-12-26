@@ -7,10 +7,9 @@ namespace HW3_Zookeeper
 {
     interface IDistributer
     {
-
-        void join(String alliance, String airline, String url);
+        void join();
         bool isDelegate();
-        List<NodeData> getAirlines(String alliance);
-
+        List<ServerNode> getServers();
+        List<DataNode> getData();
     }
 }
