@@ -38,9 +38,11 @@
     <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="NodeData.cs" />
+    <Compile Include="DataNode.cs" />
     <Compile Include="Distributer.cs" />
     <Compile Include="IDistributer.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="ServerNode.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Newtonsoft.Json">

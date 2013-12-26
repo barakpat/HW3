@@ -5,6 +5,8 @@ using System.Text;
 using ZooKeeperNet;
 using Org.Apache.Zookeeper.Data;
 
+//TODO: what to do when all the servers inside alliance failed? remove the alliance node? inform the search server?
+
 namespace HW3_Zookeeper
 {
 
@@ -12,101 +14,174 @@ namespace HW3_Zookeeper
     {
 
         private static String zookeeperConfigFilePath = "zookeeper.conf";
-        private static String root = "/alliances";
-        private static String airlines = "/airlines";
-        private static String data = "/data";
+        
+        private static String rootNodeName = "/hw3";
+        private static String serversNodeName = "/servers";
+        private static String dataNodeName = "/data";
+        
+        private static String serverNodeNamePrefix = "n_";
 
         private ZooKeeper zk;
+        
+        private String alliance;
+        private String airline;
+        private String url;
+        
+        private String sequence;
+        private bool isLeader;
+        
+        private List<DataNode> data;
+        private List<ServerNode> servers;
 
-        public Distributer()
+        public Distributer(String alliance, String airline, String url)
         {
-            zk = new ZooKeeper(getAddress(), new TimeSpan(1, 0, 0, 0), this);
-            Stat s = zk.Exists(root, false);
+            this.alliance = alliance;
+            this.airline = airline;
+            this.url = url;
+            
+            this.zk = new ZooKeeper(getAddress(), new TimeSpan(1, 0, 0, 0), this);
+            
+            Stat s = this.zk.Exists(rootNodeName, false);
             if (s == null)
             {
-                zk.Create(root, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
+                this.zk.Create(rootNodeName, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
+            }
+
+            String serversNode = rootNodeName + serversNodeName;
+            s = this.zk.Exists(serversNode, false);
+            if (s == null)
+            {
+                this.zk.Create(serversNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
+            }
+
+            String allianceInServersNode = serversNode + "/" + alliance;
+            s = this.zk.Exists(allianceInServersNode, false);
+            if (s == null)
+            {
+                this.zk.Create(allianceInServersNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
+            }
+
+            String dataNode = rootNodeName + dataNodeName;
+            s = this.zk.Exists(dataNode, false);
+            if (s == null)
+            {
+                this.zk.Create(dataNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
+            }
+
+            String allianceInDataNode = dataNode + "/" + alliance;
+            s = this.zk.Exists(allianceInDataNode, false);
+            if (s == null)
+            {
+                this.zk.Create(allianceInDataNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
             }
         }
 
         public void Process(WatchedEvent @event)
         {
-            if (@event.Type == EventType.NodeCreated)
-            {
+            if (@event.Type == EventType.NodeChildrenChanged && @event.Path.StartsWith(rootNodeName + serversNodeName))
+            {            
+                handleChange();
             }
-            
-            int i = 1;
-            //throw new NotImplementedException();
         }
 
-        public void join(String alliance, String airline, String url)
+        public void join()
         {
-            String allianceNode = root + "/" + alliance;
-            String airlinesNode = allianceNode + airlines;
-            String dataNode = allianceNode + data;
-            
-            Stat s = zk.Exists(allianceNode, false);
-            if (s == null)
-            {
-                zk.Create(allianceNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
-                zk.Create(airlinesNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
-                zk.Create(dataNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
-            }
+            ServerNode serverNode = new ServerNode(this.url, this.airline);
 
-            String airlineInAirlinesNode = airlinesNode + "/" + airline;
+            String airlineInServersNode = rootNodeName + serversNodeName + "/" + this.alliance + "/" + serverNodeNamePrefix;
+
+            String pathToNewServerNode = this.zk.Create(airlineInServersNode, getBytes(ServerNode.serialize(serverNode)), Ids.OPEN_ACL_UNSAFE, CreateMode.EphemeralSequential);
+            this.sequence = pathToNewServerNode.Replace(airlineInServersNode, "");
+
+            DataNode dataNode = new DataNode(this.url, this.airline, new List<String>() { this.airline }, new List<String>() { this.url });
+
+            String airlineInDataNode = rootNodeName + dataNodeName + "/" + this.alliance + "/" + this.airline;
             
-            s = zk.Exists(airlineInAirlinesNode, false);
+            Stat s = this.zk.Exists(airlineInDataNode, false);
             if (s == null)
             {
-                zk.Create(airlineInAirlinesNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Ephemeral);
+                this.zk.Create(airlineInDataNode, getBytes(DataNode.serialize(dataNode)), Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
             }
             else
             {
-                //TODO: not suppose to happen
+                this.zk.SetData(airlineInDataNode, getBytes(DataNode.serialize(dataNode)), -1);
             }
 
-            NodeData nodeData = new NodeData(url, airline, new List<String>() { airline }, new List<String>() { url });
-
-            String airlineInDataNode = dataNode + "/" + airline;
-            
-            s = zk.Exists(airlineInDataNode, false);
-            if (s == null)
-            {
-                zk.Create(airlineInDataNode, getBytes(NodeData.serialize(nodeData)), Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
-            }
-            else
-            {
-                //TODO: update the data in the node
-            }
+            handleChange();
         }
 
         public bool isDelegate()
         {
-            return true;
+            return this.isLeader;
         }
 
-        public List<NodeData> getAirlines(String alliance)
+        public List<DataNode> getData()
         {
-            String allianceNode = root + "/" + alliance;
-            String dataNode = allianceNode + data;
+            return this.data;
+        }
 
-            if (zk.Exists(dataNode, false) == null)
+        public List<ServerNode> getServers()
+        {
+            return this.servers;
+        }
+
+        private void handleChange()
+        {
+            String allianceInServersNode = rootNodeName + serversNodeName + "/" + this.alliance;
+            String allianceInDataNode = rootNodeName + dataNodeName + "/" + this.alliance;
+
+            IEnumerable<String> serverNodes = this.zk.GetChildren(allianceInServersNode, true);
+            IEnumerable<String> dataNodes = this.zk.GetChildren(allianceInDataNode, false);
+
+            setLeader(allianceInServersNode, serverNodes);
+            setServers(allianceInServersNode, serverNodes);
+            setData(allianceInDataNode, dataNodes);
+
+            //TODO: run change procedure
+        }
+
+        private void setLeader(String serversPath, IEnumerable<String> serverNodes)
+        {
+            List<string> serverNodesList = serverNodes.ToList();
+            serverNodesList.Sort();
+
+            if (serverNodesList[0].Replace(serverNodeNamePrefix, "").Equals(this.sequence))
             {
-                //TODO: not suppose to happen
-                return new List<NodeData>();
+                //TODO: Run leader procedure
+                this.isLeader = true;
+            }
+            else
+            {
+                this.isLeader = false;
+            }
+        }
+
+        private void setData(String dataPath, IEnumerable<String> dataNodes)
+        {
+            List<DataNode> _data = new List<DataNode>();
+
+            foreach (String dataNode in dataNodes)
+            {
+                String airlineInDataNode = dataPath + "/" + dataNode;
+                Stat s = new Stat();
+                _data.Add(DataNode.deserialize(getString(this.zk.GetData(airlineInDataNode, false, s))));
             }
 
-            IEnumerable<String> airlines = zk.GetChildren(dataNode, false);
+            data = _data;
+        }
 
-            List<NodeData> airlinesData = new List<NodeData>();
+        private void setServers(String serversPath, IEnumerable<String> serverNodes)
+        {
+            List<ServerNode> _servers = new List<ServerNode>();
 
-            foreach (String airline in airlines)
+            foreach (String serverNode in serverNodes)
             {
-                String airlineInDataNode = dataNode + "/" + airline;
-                Stat s = zk.Exists(airlineInDataNode, false);
-                airlinesData.Add(NodeData.deserialize(getString(zk.GetData(airlineInDataNode, false, s))));
+                String airlineInServerNode = serversPath + "/" + serverNode;
+                Stat s = new Stat();
+                _servers.Add(ServerNode.deserialize(getString(this.zk.GetData(airlineInServerNode, false, s))));
             }
 
-            return airlinesData;
+            servers = _servers;
         }
 
         private static String getAddress()
@@ -129,14 +204,6 @@ namespace HW3_Zookeeper
             char[] chars = new char[bytes.Length / sizeof(char)];
             System.Buffer.BlockCopy(bytes, 0, chars, 0, bytes.Length);
             return new string(chars);
-        }
-
-        public static void Main()
-        {
-            Distributer d = new Distributer();
-            d.join("Matmid", "ElAl", "127.0.0.1:8080");
-            List<NodeData> nodes = d.getAirlines("Matmid");
-            Console.ReadKey();
         }
 
     }

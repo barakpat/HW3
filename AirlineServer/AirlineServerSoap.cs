@@ -53,7 +53,7 @@ namespace AirlineServer
             this.channel = this.proxy.CreateChannel();
             this.initializeFlights(args[5]);
 
-            distributer = new Distributer();
+            distributer = new Distributer(this.alliance, this.airline, this.AllienceUri);
            // this.registerSeller(args);
         }
 
@@ -131,7 +131,7 @@ namespace AirlineServer
 
         public void joinCluster()
         {
-            this.distributer.join(this.alliance,this.airline,this.AllienceUri);
+            this.distributer.join();
         }
 
         public void registerDelegate(string URI)
