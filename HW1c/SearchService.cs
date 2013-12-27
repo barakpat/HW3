@@ -13,10 +13,10 @@ namespace HW1c
 
     public class SearchService : ISearchService
     {
-        
-        public Flights GetFlights(String src, String dst, String date, Airlines airlines)
+
+        public ConnectionFlights GetFlights(String src, String dst, String date, String airlines)
         {
-            Flights res = new Flights();
+            ConnectionFlights res = new ConnectionFlights();
             Console.WriteLine("getFlights src=" + src);
             DateTime newDate;
             if (!this.getFlightCheckParams(src, dst, date, out newDate))
@@ -26,27 +26,62 @@ namespace HW1c
                 return res;
             }
 
-            // Use var keyword to enumerate dictionary
-            foreach (var ts in TicketServerList.ticketServersProxies.Values)
+            string[] airlinesArray = Array.ConvertAll(airlines.Trim().Split(' '), p => p.Trim());
+            airlinesArray = airlinesArray.Where(item => item != "").ToArray();
+            //string[] airlinesArray = airlines.Split(' ');
+
+            if (airlinesArray.Length > 0) // specific airlines were specified
             {
-                try
-                {
-                    using (
-                    new OperationContextScope((IContextChannel)ts))
+                Console.Write("the airline are: ");
+                foreach (String airline in airlinesArray){
+                    String server=null;
+                    IAirlineServerSoap ts;
+                    TicketServerList.airlineToServer.TryGetValue(airline,out server);
+                    if (server==null) continue;
+
+                    TicketServerList.ticketServersProxies.TryGetValue(server, out ts);
+                    try
                     {
-                        Flights flightsRes = ts.Search(src, dst, newDate);
-                        res.AddRange(flightsRes);
+                        using (
+                        new OperationContextScope((IContextChannel)ts))
+                        {
+                            ConnectionFlights flightsRes = ts.Search(src, dst, newDate);
+                            res.AddRange(flightsRes);
+                        }
+                    }
+                    catch (FaultException e)
+                    {
+                        Console.WriteLine("service failed: {0}", e.Reason);
+                    }
+                    catch (Exception e)
+                    {
+
                     }
                 }
-                catch (FaultException e)
+            }
+            else{
+                foreach (var ts in TicketServerList.ticketServersProxies.Values)
                 {
-                    Console.WriteLine("service failed: {0}", e.Reason);
-                }
-                catch (Exception e)
-                {
+                    try
+                    {
+                        using (
+                        new OperationContextScope((IContextChannel)ts))
+                        {
+                            ConnectionFlights flightsRes = ts.Search(src, dst, newDate);
+                            res.AddRange(flightsRes);
+                        }
+                    }
+                    catch (FaultException e)
+                    {
+                        Console.WriteLine("service failed: {0}", e.Reason);
+                    }
+                    catch (Exception e)
+                    {
 
+                    }
                 }
             }
+            
 
             return res; 
             

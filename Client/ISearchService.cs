@@ -13,7 +13,7 @@ namespace HW1c
     {
         [OperationContract]
         [WebInvoke(Method = "GET", UriTemplate = "flights?src={src}&dst={dst}&date={date}&airlines={airlines}")]
-        Flights GetFlights(String src, String dst, String date , Airlines airlines);
+        ConnectionFlights GetFlights(String src, String dst, String date, String airlines);
 
     }
 }

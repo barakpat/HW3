@@ -33,21 +33,25 @@ namespace Client
                         String src;
                         String dst;
                         DateTime date;
+                        String airlines = "";
                         try
                         {
                             src = words[1];
                             dst = words[2];
                             date = DateTime.ParseExact(words[3], dateFormat, CultureInfo.InvariantCulture);
+                            for (int i=4 ; i<words.Length ; i++){
+                                airlines += words[i] + " ";
+                            }
                         }
                         catch (Exception e)
                         {
                             Console.WriteLine("Failed, Invalid Input");
                             continue;
                         }
-                        Flights flights =null;
-                        Airlines airlines = new Airlines();
+                        ConnectionFlights flights = null;
                         
-                        airlines.Add("KLM");
+
+                        //airlines.Add("KLM");
                         
                         try
                         {
@@ -57,21 +61,13 @@ namespace Client
                             continue;
                         }
 
-                        
-                        flights.Sort(delegate(Flight f1, Flight f2)
-                        {
-                            if (f1.Price > f2.Price) return 1;
-                            else if (f1.Price < f2.Price) return -1;
-                            else
-                            {
-                                if (f1.AvailableSeats < f2.AvailableSeats) return 1;
-                                else if (f1.AvailableSeats > f2.AvailableSeats) return -1;
-                                else return f1.FNum.CompareTo(f2.FNum);
-                            }
 
+                        flights.Sort(delegate(ConnectionFlight f1, ConnectionFlight f2)
+                        {
+                            return f1.price.CompareTo(f2.price);
                         });
 
-                        flights = new Flights(flights.Where(f => f.AvailableSeats > 0).ToList());
+                        //flights = new Flights(flights.Where(f => f.AvailableSeats > 0).ToList());
 
 
                         if (!flights.Any() )
@@ -80,9 +76,18 @@ namespace Client
                         }
                         else
                         {
-                            foreach (Flight f in flights)
+                            foreach (ConnectionFlight f in flights)
                             {
-                                Console.WriteLine("{0} {1} {2} seats {3}$", f.Seller, f.FNum, f.AvailableSeats, f.Price);
+                                //400$: tlv-par (air-france, af1234), par-jfk (air-france, af321)
+                                if (f.flight2 == null)
+                                {
+                                    Console.WriteLine("{0}$: {1}-{2} ({3}, {4})", f.price, f.flight1.Src, f.flight1.Dst, f.flight1.Seller, f.flight1.FNum);
+                                }
+                                else
+                                {
+                                     Console.WriteLine("{0}$: {1}-{2} ({3}, {4}), {5}-{6} ({7}, {8})", f.price, f.flight1.Src, f.flight1.Dst, f.flight1.Seller, f.flight1.FNum,
+                                                                                                         f.flight2.Src, f.flight2.Dst, f.flight2.Seller, f.flight2.FNum);
+                                }
                             }
                         }
 

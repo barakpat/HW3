@@ -17,6 +17,8 @@ namespace AirlineServer
             try
             {
                 AirlineServerSoap airlineServer = new AirlineServerSoap(args);
+                using (ServiceHost allienceHost = new ServiceHost(
+                    airlineServer, new Uri("http://localhost:" + airlineServer.alliancePort + "/services")))
                 using (ServiceHost host = new ServiceHost(
                     airlineServer, new Uri("http://localhost:" + airlineServer.searchPort + "/services")))
                 {

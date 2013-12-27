@@ -8,12 +8,10 @@ using System.Threading.Tasks;
 
 namespace AirlineServer
 {
-    
     [ServiceContract]
-    interface IAirlineServerSoap
+    interface IAirlineCommunication
     {
         [OperationContract]
         ConnectionFlights Search(String src, String dst, DateTime date);
-
     }
 }
