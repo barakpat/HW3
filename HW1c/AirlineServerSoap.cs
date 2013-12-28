@@ -16,7 +16,7 @@ public interface IAirlineServerSoap
 {
 
     [System.ServiceModel.OperationContractAttribute(Action = "http://tempuri.org/IAirlineServerSoap/Search", ReplyAction = "http://tempuri.org/IAirlineServerSoap/SearchResponse")]
-    HW1c.ConnectionFlights Search(string src, string dst, System.DateTime date);
+    HW1c.ConnectionFlights Search(string src, string dst, System.DateTime date, string airline);
 
 }
 
@@ -54,9 +54,9 @@ public partial class AirlineServerSoapClient : System.ServiceModel.ClientBase<IA
     {
     }
 
-    public HW1c.ConnectionFlights Search(string src, string dst, System.DateTime date)
+    public HW1c.ConnectionFlights Search(string src, string dst, System.DateTime date, string airline)
     {
-        return base.Channel.Search(src, dst, date);
+        return base.Channel.Search(src, dst, date, airline);
     }
 
 }

@@ -44,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AirlineCommunication.cs" />
     <Compile Include="AirlineServerSoap.cs" />
     <Compile Include="datatypes.cs" />
     <Compile Include="IAirlineCommunication.cs" />

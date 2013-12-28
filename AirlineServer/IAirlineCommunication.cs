@@ -12,6 +12,6 @@ namespace AirlineServer
     interface IAirlineCommunication
     {
         [OperationContract]
-        ConnectionFlights Search(String src, String dst, DateTime date);
+        AirlinesFlights Search(String src, String dst, DateTime date, String airline);
     }
 }

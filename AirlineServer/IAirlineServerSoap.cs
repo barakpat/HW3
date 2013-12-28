@@ -13,7 +13,7 @@ namespace AirlineServer
     interface IAirlineServerSoap
     {
         [OperationContract]
-        ConnectionFlights Search(String src, String dst, DateTime date);
+        ConnectionFlights Search(String src, String dst, DateTime date, String airline);
 
     }
 }

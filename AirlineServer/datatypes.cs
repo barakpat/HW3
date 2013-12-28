@@ -88,6 +88,34 @@ namespace HW1c
         public Flights(List<Flight> flights) : base(flights) { }
     }
 
+    [DataContract]
+    public class AirlineFlights
+    {
+        public AirlineFlights() { }
+        public AirlineFlights(Flights srcDstflights, Flights srcFlights, Flights dstDay1Flights, Flights dstDay2Flights)
+        {
+            this.srcDstflights = srcDstflights;
+            this.srcFlights = srcFlights;
+            this.dstDay1Flights = dstDay1Flights;
+            this.dstDay2Flights = dstDay2Flights;
+        }
+        [DataMember]
+        public Flights srcDstflights { get; set; }
+        [DataMember]
+        public Flights srcFlights { get; set; }
+        [DataMember]
+        public Flights dstDay1Flights { get; set; }
+        [DataMember]
+        public Flights dstDay2Flights { get; set; }
+    }
+
+    [CollectionDataContract
+    (Name = "AirlinesFlights",
+    ItemName = "entry",
+    KeyName = "airline",
+    ValueName = "flights")]
+    public class AirlinesFlights : Dictionary<string, AirlineFlights> { }
+
 
     [DataContract]
     public class AllianceDelegate

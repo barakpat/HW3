@@ -26,11 +26,11 @@ namespace HW1c
                 return res;
             }
 
-            string[] airlinesArray = Array.ConvertAll(airlines.Trim().Split(' '), p => p.Trim());
-            airlinesArray = airlinesArray.Where(item => item != "").ToArray();
+            //string[] airlinesArray = Array.ConvertAll(airlines.Trim().Split(' '), p => p.Trim());
+            //airlinesArray = airlinesArray.Where(item => item != "").ToArray();
             //string[] airlinesArray = airlines.Split(' ');
 
-            if (airlinesArray.Length > 0) // specific airlines were specified
+           /* if (airlinesArray.Length > 0) // specific airlines were specified
             {
                 Console.Write("the airline are: ");
                 foreach (String airline in airlinesArray){
@@ -45,7 +45,7 @@ namespace HW1c
                         using (
                         new OperationContextScope((IContextChannel)ts))
                         {
-                            ConnectionFlights flightsRes = ts.Search(src, dst, newDate);
+                            ConnectionFlights flightsRes = ts.Search(src, dst, newDate, airline);
                             res.AddRange(flightsRes);
                         }
                     }
@@ -58,8 +58,8 @@ namespace HW1c
 
                     }
                 }
-            }
-            else{
+            }*/
+          //  else{
                 foreach (var ts in TicketServerList.ticketServersProxies.Values)
                 {
                     try
@@ -67,7 +67,7 @@ namespace HW1c
                         using (
                         new OperationContextScope((IContextChannel)ts))
                         {
-                            ConnectionFlights flightsRes = ts.Search(src, dst, newDate);
+                            ConnectionFlights flightsRes = ts.Search(src, dst, newDate, airlines);
                             res.AddRange(flightsRes);
                         }
                     }
@@ -80,7 +80,7 @@ namespace HW1c
 
                     }
                 }
-            }
+           // }
             
 
             return res; 
