@@ -120,6 +120,10 @@ namespace HW1c
     [DataContract]
     public class AirlineFlightsData
     {
+        public AirlineFlightsData()
+        {
+            this.flights = new Flights();
+        }
         [DataMember]
         public Flights flights { get; set; }
         [DataMember]
