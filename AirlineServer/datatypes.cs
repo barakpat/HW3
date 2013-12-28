@@ -124,6 +124,13 @@ namespace HW1c
         {
             this.flights = new Flights();
         }
+        public AirlineFlightsData(AirlineFlightsData airline, bool backup)
+        {
+            this.flights = airline.flights;
+            this.airlineName = airline.airlineName;
+            this.backup = backup ? !airline.backup : airline.backup;
+        }
+        
         [DataMember]
         public Flights flights { get; set; }
         [DataMember]
