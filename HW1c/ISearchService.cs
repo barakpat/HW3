@@ -12,8 +12,8 @@ namespace HW1c
     public interface ISearchService
     {
         [OperationContract]
-        [WebInvoke(Method = "GET", UriTemplate = "flights?src={src}&dst={dst}&date={date}")]
-        Flights GetFlights(String src, String dst, String date);
+        [WebInvoke(Method = "GET", UriTemplate = "flights?src={src}&dst={dst}&date={date}&airlines={airlines}")]
+        ConnectionFlights GetFlights(String src, String dst, String date, String airlines);
 //ooppss
         [OperationContract]
         [WebInvoke(Method = "POST", UriTemplate = "reservations")]

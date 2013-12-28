@@ -16,22 +16,27 @@ namespace AirlineServer
 
             try
             {
-                AirlineServerSoap airlineServer = new AirlineServerSoap(args);
+                AirlineCommunication airlineCommunicationServer = new AirlineCommunication(args);
+                AirlineServerSoap airlineServer = new AirlineServerSoap(args, airlineCommunicationServer);
+                using (ServiceHost allienceHost = new ServiceHost(
+                    airlineCommunicationServer, new Uri("http://localhost:" + airlineServer.alliancePort + "/allience")))
                 using (ServiceHost host = new ServiceHost(
                     airlineServer, new Uri("http://localhost:" + airlineServer.searchPort + "/services")))
                 {
                     var behaviour = host.Description.Behaviors.Find<ServiceBehaviorAttribute>();
                     behaviour.InstanceContextMode = InstanceContextMode.Single;
+
+                    var allienceBehaviour = allienceHost.Description.Behaviors.Find<ServiceBehaviorAttribute>();
+                    allienceBehaviour.InstanceContextMode = InstanceContextMode.Single;
                     // define the service endpoints
+                    allienceHost.Open();
+                    
                     host.Open();
 
                     // TODO -join cluster
                     airlineServer.joinCluster();
-                    if (airlineServer.isDelegate())
-                    {
-                        airlineServer.registerDelegate("http://" + LocalIPAddress() + ":" + airlineServer.searchPort + "/services");
-                    }
-
+                    airlineServer.registerDelegate("http://" + LocalIPAddress() + ":" + airlineServer.searchPort + "/services");
+                    
 
                     // old- hw1
                     //airlineServer.registerSeller("http://" + LocalIPAddress() + ":" + args[0] + "/services");

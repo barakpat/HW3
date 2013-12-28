@@ -12,5 +12,7 @@ namespace HW1c
     {
         static public ConcurrentDictionary<string, IAirlineServerSoap> ticketServersProxies =
         new ConcurrentDictionary<string, IAirlineServerSoap>();
+        static public ConcurrentDictionary<string, string> airlineToServer =
+        new ConcurrentDictionary<string, string>();
     }
 }

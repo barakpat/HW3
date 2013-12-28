@@ -13,14 +13,8 @@ namespace AirlineServer
 {
     class AirlineServerSoap : IAirlineServerSoap
     {
-        public class ServerFlight : Flight
-        {
-            public int Seats { get; set; }
-        }
-
-        // in-memory resource collections
-        List<ServerFlight> flights = new List<ServerFlight>();
-        Dictionary<int, String> reservations = new Dictionary<int, String>();
+        
+        
         //int reservationId = 0;
 
         public String IP
@@ -33,7 +27,7 @@ namespace AirlineServer
         }
         public String AllienceUri
         {
-            get { return "http://" + IP + ":" + alliancePort + "/services"; }
+            get { return "http://" + IP + ":" + alliancePort + "/allience"; }
         }
 
         public String airline { get; set; }
@@ -41,20 +35,21 @@ namespace AirlineServer
         public String searchPort { get; set; }
         public String alliancePort { get; set; }
         public Distributer distributer { get; set; }
+        public AirlineCommunication airlineCommunicationServer { get; set; } 
+
         WebChannelFactory<ISellerService> proxy;
         ISellerService channel;
-        public AirlineServerSoap(string[] args)
+        public AirlineServerSoap(string[] args, AirlineCommunication airlineCommunicationServer)
         {
+            this.airlineCommunicationServer = airlineCommunicationServer;
             this.airline = args[0];
             this.alliance = args[1];
             this.searchPort = args[2];
             this.alliancePort = args[3];
             this.proxy = new WebChannelFactory<ISellerService>(new Uri(args[4]));
             this.channel = this.proxy.CreateChannel();
-            this.initializeFlights(args[5]);
-
-            distributer = new Distributer(this.alliance, this.airline, this.AllienceUri);
-           // this.registerSeller(args);
+            this.airlineCommunicationServer.distributer = new Distributer(this.alliance, this.airline, this.AllienceUri);
+            //distributer = new Distributer(this.alliance, this.airline, this.AllienceUri);
         }
 
         
@@ -69,7 +64,7 @@ namespace AirlineServer
         }
 
         public bool isDelegate() {
-            return this.distributer.isDelegate();
+            return this.airlineCommunicationServer.distributer.isDelegate();
         }
 
         public void registerSeller(string URI)
@@ -89,54 +84,120 @@ namespace AirlineServer
         }
 
         
-
-        // read flights from file
-        private void initializeFlights(String fileName)
-        {
-            String line;
-            System.IO.StreamReader file =
-                 new System.IO.StreamReader(fileName);
-            ServerFlight f;
-            while ((line = file.ReadLine()) != null)
-            {
-                String[] words = line.Split();
-                f = new ServerFlight();
-                f.Seller = this.airline;
-                f.FNum = words[0];
-                f.Src = words[1];
-                f.Dst = words[2];
-                f.Date = DateTime.ParseExact(words[3], "dd/MM/yyyy", CultureInfo.InvariantCulture);
-                f.AvailableSeats = f.Seats = Convert.ToInt32(words[4]);
-                f.Price = Convert.ToInt32(words[5]);
-                this.flights.Add(f);
-            }
-
-            file.Close();
-        }
-
-        public Flights Search(String src, String dst, DateTime date)
+        /*
+        public Flights SearchSrcAndDst(String src, String dst, DateTime date)
         {
             Flights resFlights = new Flights();
-            
-            foreach(ServerFlight f in flights ){
-                if (f.Src == src && f.Dst == dst && f.Date == date)
+
+            foreach (ServerFlight f in flights)
+            {
+                if (f.Src == src &&  f.Dst == dst && f.Date == date)
                 {
                     resFlights.Add(new Flight(f));
                 }
 
-            }            
-            Console.WriteLine("Search: " + "src: " + src + " " + "dst: " + dst + " " + "date: " + date + " ");
+            }
             return resFlights;
         }
 
+        public Flights SearchToDstNotFromSrc(String src, String dst, DateTime date)
+        {
+            Flights resFlights = new Flights();
+
+            foreach (ServerFlight f in flights)
+            {
+                if (f.Src != src &&  f.Dst == dst && f.Date == date)
+                {
+                    resFlights.Add(new Flight(f));
+                }
+
+            }
+            return resFlights;
+        }
+
+        public Flights SearchFromSrcNotToDst(String src,String dst, DateTime date)
+        {
+            Flights resFlights = new Flights();
+
+            foreach (ServerFlight f in flights)
+            {
+                if (f.Src == src && f.Dst != dst && f.Date == date)
+                {
+                    resFlights.Add(new Flight(f));
+                }
+
+            }
+            return resFlights;
+        }
+        */
+
+
+        public ConnectionFlights Search(String src, String dst, DateTime date, String airline)
+        {
+            
+            /*
+            Flights srcDstFlights = new Flights();
+            Flights srcFlights = new Flights();
+            Flights dstFlightsDay1 = new Flights();
+            Flights dstFlightsDay2 = new Flights();
+            
+            //create connection to other servers - TODO should be outside the function
+            
+
+            ConnectionFlights resFlights = new ConnectionFlights();
+            
+           
+            Flights srcDstFlightsDay1 = this.SearchSrcAndDst(src, dst, date);
+          //  Flights srcDstFlightsDay2 = this.SearchSrcAndDst(src, dst, date.AddDays(1));
+
+            Flights srcFlightsDay1 = this.SearchFromSrcNotToDst(src, dst, date);
+            //Flights srcFlightsDay2 = this.SearchFromSrc(src, date.AddDays(1));
+            dstFlightsDay1 = this.SearchToDstNotFromSrc(src,  dst, date);
+            dstFlightsDay2 = this.SearchToDstNotFromSrc(src,  dst, date.AddDays(1));
+
+            foreach (Flight f in srcDstFlightsDay1)
+            {
+                    resFlights.Add(new ConnectionFlight(f));
+            }
+
+            foreach (Flight f1 in srcFlightsDay1)
+            {
+                foreach (Flight f2 in dstFlightsDay1)
+                {
+                    if (f1.Dst == f2.Src)
+                    {
+                         resFlights.Add(new ConnectionFlight(f1,f2));
+                    }
+                }
+                foreach (Flight f2 in dstFlightsDay2)
+                {
+                    if (f1.Dst == f2.Src)
+                    {
+                        resFlights.Add(new ConnectionFlight(f1, f2));
+                    }
+                }
+            }
+
+            Console.WriteLine("Search: " + "src: " + src + " " + "dst: " + dst + " " + "date: " + date + " ");
+
+            return resFlights;
+            */
+            return this.airlineCommunicationServer.SearchAllServers(src, dst, date, airline);
+            
+        }
+
+        
+
         public void joinCluster()
         {
-            this.distributer.join();
+            this.airlineCommunicationServer.distributer.join();
         }
 
         public void registerDelegate(string URI)
         {
             AllianceDelegate allianceDelegate = new AllianceDelegate();
+            allianceDelegate.isDelegate = true; //this.distributer.isDelegate();
+            allianceDelegate.AirlineName = this.airline;
             allianceDelegate.AllianceName = this.alliance;
             allianceDelegate.Port = this.searchPort;
             allianceDelegate.ServiceURI = new Uri(URI + "/AirlineServerSoap");
