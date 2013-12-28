@@ -15,6 +15,7 @@ namespace AirlineServer
     {
 
         readonly static int initialVersion = -1;
+        readonly static int minimalNumberOfCopies = 2;
         int currentVersion = initialVersion;
         AirlineFlightsData airlineFlightsData = new AirlineFlightsData();
         AirlinesFlightsData airlinesFlightsData = new AirlinesFlightsData();
@@ -65,10 +66,20 @@ namespace AirlineServer
         }
 
         // replication algorithm delegate method
-        public void deleteOldData(String airline)
+        public List<ServerData> deleteOldData(String airline)
         {
+            List<ServerData> servers = this.distributer.getServers();
             AirlinesFlightsData tmpAirlinesFlightsData = getCurrentPhaseDate();
             tmpAirlinesFlightsData.Remove(airline);
+
+            foreach (ServerData server in servers) 
+            {
+                if (server.airline != airline) {
+                    server.airlines = server.airlines.Where(x => x.name != airline).ToList();
+                }
+            }
+            
+            return servers;
         }
 
         private AirlinesFlightsData getCurrentPhaseDate()
@@ -79,7 +90,7 @@ namespace AirlineServer
         }
 
         // replication algorithm delegate method
-        public void backUp()
+        public List<ServerData> backUp()
         {
             List<ServerData> allienceServers = this.distributer.getServers();
             AirlinesFlightsData tmpAirlinesFlightsData = getCurrentPhaseDate();
@@ -92,16 +103,91 @@ namespace AirlineServer
                     backupAirline(airlineFlightsData, allienceServers);
                 }
             }
+            List<ServerData> newAllienceServers = calcNewAllienceServersState(allienceServers);
+            return newAllienceServers;
         }
 
+        /**
+         * Calculate the new allience state of the new servers
+         */
+        private List<ServerData> calcNewAllienceServersState(List<ServerData> allienceServers)
+        {
+            foreach (ServerData server in allienceServers)
+            {
+                foreach (AirlineData a in server.airlines)
+                {
+                    if (!isBackedUp(a.name, allienceServers))
+                    {
+                        ServerData targetServer = findTargetServer(a.name, allienceServers);
+                        AirlineData backupAirlineData = new AirlineData(a.name, !a.isPrimary);
+                        targetServer.airlines.Add(backupAirlineData);
+                    }
+                    
+                }
+            }
+            return allienceServers;
+        }
+
+
+        /*
+         * backing up a flight data in a new airline 
+         * */
         private void backupAirline(AirlineFlightsData airlineFlightsData, List<ServerData> allienceServers)
         {
-            throw new NotImplementedException();
+            ServerData targetServer = findTargetServer(airlineFlightsData.airlineName, allienceServers);
+            AirlineFlightsData copyAirlineFlightsData = new AirlineFlightsData(airlineFlightsData, true); // creating the copy of the backup
+            ServiceEndpoint httpEndpoint =
+                           new ServiceEndpoint(
+                           ContractDescription.GetContract(
+                           typeof(IAirlineCommunication)),
+                           new BasicHttpBinding(),
+                           new EndpointAddress
+                           (targetServer.url + "/AirlineCommunication"));
+            //// create channel factory based on HTTP endpoint
+            ChannelFactory<IAirlineCommunication> channelFactory = new ChannelFactory<IAirlineCommunication>(httpEndpoint);
+            IAirlineCommunication channel = channelFactory.CreateChannel();
+            channel.moveAirline(copyAirlineFlightsData);
+
+        }
+
+        private ServerData findTargetServer(String airlineName, List<ServerData> allienceServers)
+        {
+            foreach (ServerData server in allienceServers)
+            {
+                bool serverNotContain = true;
+                foreach (AirlineData a in server.airlines)
+                {
+                    if (a.name == airlineName)
+                    {
+                        serverNotContain = false;
+                    }
+                }
+                if (serverNotContain)
+                {
+                    return server;
+                }
+            }
+            
+            // should never reach here
+            Console.WriteLine("Code should never reach here");
+            Console.WriteLine("airline server : " + airlineFlightsData.airlineName);
+            return allienceServers[0];
         }
 
         private bool isBackedUp(string airline, List<ServerData> allienceServers)
         {
-            throw new NotImplementedException();
+            int numberOfCopies = 0;
+            foreach (ServerData server in allienceServers)
+            {
+                foreach(AirlineData a in  server.airlines){
+                    if (a.name == airline)
+                    {
+                        numberOfCopies++;
+                    }
+                }
+            }
+
+            return numberOfCopies >= AirlineCommunication.minimalNumberOfCopies;
         }
 
         public Boolean moveAirline(AirlineFlightsData airline)
