@@ -16,67 +16,59 @@ namespace HW3_Zookeeper
 
         private static String zookeeperConfigFilePath = "zookeeper.conf";
         
-        private static String rootNodeName = "/hw3";
-        private static String serversNodeName = "/servers";
-        private static String dataNodeName = "/data";
-        
+        private static String rootNodeName = "/alliances";
+        private static String barriersNodeName = "/barriers";
+        private static String phaseBarrierNodeName = "/phase";
+
         private static String serverNodeNamePrefix = "n_";
 
+        public delegate void UpdateDataToPhaseDelegate(int phase);
+
         private ZooKeeper zk;
-        
         private AutoResetEvent connectedSignal = new AutoResetEvent(false);
 
         private String alliance;
         private String airline;
         private String url;
+        private UpdateDataToPhaseDelegate updateDataToPhaseDelegate;
         
-        private String sequence;
+        private String ephemeralNodeName;
         private bool isLeader;
+        private int phase = 0;
+        private Dictionary<int, List<ServerData>> phases = new Dictionary<int,List<ServerData>>();
         
-        private List<DataNode> data;
-        private List<ServerNode> servers;
+        private List<ServerData> servers;
 
-        public Distributer(String alliance, String airline, String url)
+        public Distributer(String alliance, String airline, String url, UpdateDataToPhaseDelegate updateDataToPhaseDelegate)
         {
             this.alliance = alliance;
             this.airline = airline;
             this.url = url;
+            this.updateDataToPhaseDelegate = updateDataToPhaseDelegate;
             
             this.zk = new ZooKeeper(getAddress(), new TimeSpan(1, 0, 0, 0), this);
             this.connectedSignal.WaitOne();
-           
-            Stat s = this.zk.Exists(rootNodeName, false);
-            if (s == null)
+
+            if (this.zk.Exists(rootNodeName, false) == null)
             {
                 this.zk.Create(rootNodeName, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
             }
 
-            String serversNode = rootNodeName + serversNodeName;
-            s = this.zk.Exists(serversNode, false);
-            if (s == null)
+            String alliancePath = rootNodeName + "/" + this.alliance;
+            if (this.zk.Exists(alliancePath, false) == null)
             {
-                this.zk.Create(serversNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
+                this.zk.Create(alliancePath, getBytes(AllianceData.serialize(new AllianceData())), Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
             }
 
-            String allianceInServersNode = serversNode + "/" + alliance;
-            s = this.zk.Exists(allianceInServersNode, false);
-            if (s == null)
+            if (this.zk.Exists(barriersNodeName, false) == null)
             {
-                this.zk.Create(allianceInServersNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
+                this.zk.Create(barriersNodeName, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
             }
 
-            String dataNode = rootNodeName + dataNodeName;
-            s = this.zk.Exists(dataNode, false);
-            if (s == null)
+            String phaseBarrierPath = barriersNodeName + phaseBarrierNodeName;
+            if (this.zk.Exists(phaseBarrierPath, false) == null)
             {
-                this.zk.Create(dataNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
-            }
-
-            String allianceInDataNode = dataNode + "/" + alliance;
-            s = this.zk.Exists(allianceInDataNode, false);
-            if (s == null)
-            {
-                this.zk.Create(allianceInDataNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
+                this.zk.Create(phaseBarrierPath, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
             }
         }
 
@@ -86,36 +78,35 @@ namespace HW3_Zookeeper
             {
                 this.connectedSignal.Set();
             }
-            if (@event.Type == EventType.NodeChildrenChanged && @event.Path.StartsWith(rootNodeName + serversNodeName))
+            if (@event.Type == EventType.NodeChildrenChanged)
             {            
-                handleChange();
+                algorithm();
             }
         }
 
         public void join()
         {
-            ServerNode serverNode = new ServerNode(this.url, this.airline);
+            AirlineData airlineData = new AirlineData(this.airline, true);
+            ServerData serverNode = new ServerData(this.url, this.airline, new List<AirlineData>() { airlineData });
+            String allianceInRootNode = rootNodeName + "/" + this.alliance;
+            this.ephemeralNodeName = this.zk.Create(allianceInRootNode + "/" + serverNodeNamePrefix, getBytes(ServerData.serialize(serverNode)), Ids.OPEN_ACL_UNSAFE, CreateMode.EphemeralSequential).Replace(allianceInRootNode + "/", "");
 
-            String airlineInServersNode = rootNodeName + serversNodeName + "/" + this.alliance + "/" + serverNodeNamePrefix;
-
-            String pathToNewServerNode = this.zk.Create(airlineInServersNode, getBytes(ServerNode.serialize(serverNode)), Ids.OPEN_ACL_UNSAFE, CreateMode.EphemeralSequential);
-            this.sequence = pathToNewServerNode.Replace(airlineInServersNode, "");
-
-            DataNode dataNode = new DataNode(this.url, this.airline, new List<String>() { this.airline }, new List<String>() { this.url });
-
-            String airlineInDataNode = rootNodeName + dataNodeName + "/" + this.alliance + "/" + this.airline;
-            
-            Stat s = this.zk.Exists(airlineInDataNode, false);
-            if (s == null)
+            Stat s = new Stat();
+            AllianceData allianceData = AllianceData.deserialize(getString(this.zk.GetData(allianceInRootNode, true, s)));
+            if (!allianceData.airlines.Contains(this.airline))
             {
-                this.zk.Create(airlineInDataNode, getBytes(DataNode.serialize(dataNode)), Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
-            }
-            else
-            {
-                this.zk.SetData(airlineInDataNode, getBytes(DataNode.serialize(dataNode)), -1);
+                allianceData.airlines.Add(this.airline);
+                this.zk.SetData(allianceInRootNode, getBytes(AllianceData.serialize(allianceData)), -1);
             }
 
-            handleChange();
+            this.phases[this.phase] = new List<ServerData>() { serverNode };
+
+            algorithm();
+        }
+
+        public void leave()
+        {
+            this.zk.Delete(rootNodeName + "/" + this.alliance + "/" + this.ephemeralNodeName, -1);
         }
 
         public bool isDelegate()
@@ -123,29 +114,101 @@ namespace HW3_Zookeeper
             return this.isLeader;
         }
 
-        public List<DataNode> getData()
-        {
-            return this.data;
-        }
-
-        public List<ServerNode> getServers()
+        public List<ServerData> getServers()
         {
             return this.servers;
         }
 
-        private void handleChange()
+        private void algorithm()
         {
-            String allianceInServersNode = rootNodeName + serversNodeName + "/" + this.alliance;
-            String allianceInDataNode = rootNodeName + dataNodeName + "/" + this.alliance;
-
+            String allianceInServersNode = rootNodeName + "/" + this.alliance;
+            
             IEnumerable<String> serverNodes = this.zk.GetChildren(allianceInServersNode, true);
-            IEnumerable<String> dataNodes = this.zk.GetChildren(allianceInDataNode, false);
 
             setLeader(allianceInServersNode, serverNodes);
-            setServers(allianceInServersNode, serverNodes);
-            setData(allianceInDataNode, dataNodes);
 
-            //TODO: run change procedure
+            String phaseBarrierPath = barriersNodeName + phaseBarrierNodeName;
+            Barrier phaseBarrier = new Barrier(getAddress(), phaseBarrierPath, serverNodes.Count() - 1);
+
+            int newPhase = this.phase;
+            
+            if (isLeader)
+            {
+                Console.WriteLine("leader");
+                Console.WriteLine("before enter");
+                phaseBarrier.Enter();
+                Console.WriteLine("after enter");
+
+                IEnumerable<String> phaseBarrierChildren = this.zk.GetChildren(phaseBarrierPath, false);
+
+                List<int> phases = new List<int>() { this.phase };
+                foreach (String airline in phaseBarrierChildren)
+                {
+                    String airlineInBarrierNode = phaseBarrierPath + "/" + airline;
+                    Stat s = new Stat();
+                    phases.Add(Convert.ToInt32(getString(this.zk.GetData(airlineInBarrierNode, false, s))));
+                }
+
+                newPhase = phases.Max();
+                foreach (String airline in phaseBarrierChildren)
+                {
+                    String airlineInBarrierNode = phaseBarrierPath + "/" + airline;
+                    Stat s = new Stat();
+                    Console.WriteLine("before send to: " + airline);
+                    this.zk.SetData(airlineInBarrierNode, getBytes(newPhase.ToString()), -1);
+                    Console.WriteLine("after send to: " + airline);
+                }
+
+                //set zookeeper with new phase data
+                foreach (String serverNode in serverNodes)
+                {
+                    String airlineInServerNode = allianceInServersNode + "/" + serverNode;
+                    ServerData serverData = null;
+                    foreach (ServerData sd in this.phases[newPhase])
+                    {
+                        if (sd.airline.Equals(this.airline))
+                        {
+                            serverData = sd;
+                            break;
+                        }
+                    }
+                    this.zk.SetData(airlineInServerNode, getBytes(ServerData.serialize(serverData)), -1);
+                }
+
+            }
+            else
+            {
+                Console.WriteLine("not leader");
+                String phaseBarrierPathToAirline = phaseBarrierPath + "/" + this.airline;
+                DataChangedWatch dataChangedWatch = new DataChangedWatch(getAddress(), phaseBarrierPathToAirline);
+
+                this.zk.Create(phaseBarrierPathToAirline, getBytes(phase.ToString()), Ids.OPEN_ACL_UNSAFE, CreateMode.Ephemeral);
+
+                Console.WriteLine("before wait");
+                dataChangedWatch.Wait();
+                Console.WriteLine("after wait");
+
+                Stat stat = new Stat();
+                newPhase = Convert.ToInt32(getString(this.zk.GetData(phaseBarrierPathToAirline, false, stat)));
+
+                this.zk.Delete(phaseBarrierPathToAirline, -1);
+            }
+
+            this.phase = newPhase;
+            foreach (int key in this.phases.Keys)
+            {
+                if (key != newPhase)
+                {
+                    this.phases.Remove(key);
+                }
+            }
+            
+            this.updateDataToPhaseDelegate(newPhase);
+
+            Console.WriteLine("before leave");
+            phaseBarrier.Leave();
+            Console.WriteLine("after leave");
+
         }
 
         private void setLeader(String serversPath, IEnumerable<String> serverNodes)
@@ -153,9 +216,12 @@ namespace HW3_Zookeeper
             List<string> serverNodesList = serverNodes.ToList();
             serverNodesList.Sort();
 
-            if (serverNodesList[0].Replace(serverNodeNamePrefix, "").Equals(this.sequence))
+            if (serverNodesList[0].Equals(this.ephemeralNodeName))
             {
-                //TODO: Run leader procedure
+                if (!this.isLeader)
+                {
+                    //TODO: Run leader procedure
+                }
                 this.isLeader = true;
             }
             else
@@ -164,29 +230,15 @@ namespace HW3_Zookeeper
             }
         }
 
-        private void setData(String dataPath, IEnumerable<String> dataNodes)
-        {
-            List<DataNode> _data = new List<DataNode>();
-
-            foreach (String dataNode in dataNodes)
-            {
-                String airlineInDataNode = dataPath + "/" + dataNode;
-                Stat s = new Stat();
-                _data.Add(DataNode.deserialize(getString(this.zk.GetData(airlineInDataNode, false, s))));
-            }
-
-            data = _data;
-        }
-
         private void setServers(String serversPath, IEnumerable<String> serverNodes)
         {
-            List<ServerNode> _servers = new List<ServerNode>();
+            List<ServerData> _servers = new List<ServerData>();
 
             foreach (String serverNode in serverNodes)
             {
                 String airlineInServerNode = serversPath + "/" + serverNode;
                 Stat s = new Stat();
-                _servers.Add(ServerNode.deserialize(getString(this.zk.GetData(airlineInServerNode, false, s))));
+                _servers.Add(ServerData.deserialize(getString(this.zk.GetData(airlineInServerNode, false, s))));
             }
 
             servers = _servers;

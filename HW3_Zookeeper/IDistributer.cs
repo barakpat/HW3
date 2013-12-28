@@ -8,8 +8,8 @@ namespace HW3_Zookeeper
     interface IDistributer
     {
         void join();
+        void leave();
         bool isDelegate();
-        List<ServerNode> getServers();
-        List<DataNode> getData();
+        List<ServerData> getServers();
     }
 }
