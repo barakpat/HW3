@@ -36,8 +36,6 @@ namespace HW3_Zookeeper
         private bool isLeader;
         private int phase = 0;
         private Dictionary<int, List<ServerData>> phases = new Dictionary<int,List<ServerData>>();
-        
-        private List<ServerData> servers;
 
         public Distributer(String alliance, String airline, String url, UpdateDataToPhaseDelegate updateDataToPhaseDelegate)
         {
@@ -116,7 +114,7 @@ namespace HW3_Zookeeper
 
         public List<ServerData> getServers()
         {
-            return this.servers;
+            return this.phases[this.phase];
         }
 
         private void algorithm()
@@ -194,7 +192,13 @@ namespace HW3_Zookeeper
                 this.zk.Delete(phaseBarrierPathToAirline, -1);
             }
 
+            if (newPhase > 0 && this.phase == 0)
+            {
+                this.phases[newPhase] = this.phases[this.phase];
+            }
+                
             this.phase = newPhase;
+
             foreach (int key in this.phases.Keys)
             {
                 if (key != newPhase)
@@ -230,6 +234,7 @@ namespace HW3_Zookeeper
             }
         }
 
+        /*
         private void setServers(String serversPath, IEnumerable<String> serverNodes)
         {
             List<ServerData> _servers = new List<ServerData>();
@@ -243,6 +248,7 @@ namespace HW3_Zookeeper
 
             servers = _servers;
         }
+        */
 
         private static String getAddress()
         {

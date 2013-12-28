@@ -48,7 +48,8 @@ namespace AirlineServer
             this.alliancePort = args[3];
             this.proxy = new WebChannelFactory<ISellerService>(new Uri(args[4]));
             this.channel = this.proxy.CreateChannel();
-            this.airlineCommunicationServer.distributer = new Distributer(this.alliance, this.airline, this.AllienceUri);
+            HW3_Zookeeper.Distributer.UpdateDataToPhaseDelegate del = airlineCommunicationServer.updatePhase;
+            this.airlineCommunicationServer.distributer = new Distributer(this.alliance, this.airline, this.AllienceUri, del);
         }
 
         

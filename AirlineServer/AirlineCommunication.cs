@@ -25,7 +25,7 @@ namespace AirlineServer
        // Dictionary<string, List<Flight> > airlineFlights = new Dictionary<string, List<Flight> >();
         List<String> serverAirlines = new List<String>();
         String serverName;
-        List<ServerNode> liveServers = new List<ServerNode>();
+        List<ServerData> liveServers = new List<ServerData>();
         public Distributer distributer { get; set; }
 
         public AirlineCommunication(string[] args) 
@@ -81,7 +81,7 @@ namespace AirlineServer
         // replication algorithm delegate method
         public void backUp()
         {
-            List < ServerNode > allienceServers = this.distributer.getServers();
+            List<ServerData> allienceServers = this.distributer.getServers();
             AirlinesFlightsData tmpAirlinesFlightsData = getCurrentPhaseDate();
             foreach (String airline in tmpAirlinesFlightsData.Keys)
             {
@@ -94,12 +94,12 @@ namespace AirlineServer
             }
         }
 
-        private void backupAirline(AirlineFlightsData airlineFlightsData, List<ServerNode> allienceServers)
+        private void backupAirline(AirlineFlightsData airlineFlightsData, List<ServerData> allienceServers)
         {
             throw new NotImplementedException();
         }
 
-        private bool isBackedUp(string airline, List<ServerNode> allienceServers)
+        private bool isBackedUp(string airline, List<ServerData> allienceServers)
         {
             throw new NotImplementedException();
         }
@@ -133,7 +133,7 @@ namespace AirlineServer
             // algorithm 
             this.updateLiveServers();
 
-            foreach (ServerNode server in liveServers)
+            foreach (ServerData server in liveServers)
             {
                 AirlinesFlights airlinesFlights = new AirlinesFlights();
                 if (this.serverName == server.airline)// local server
