@@ -19,10 +19,15 @@ namespace HW3_Zookeeper
         private static String rootNodeName = "/alliances";
         private static String barriersNodeName = "/barriers";
         private static String phaseBarrierNodeName = "/phase";
+        private static String deleteBarrierNodeName = "/delete";
 
         private static String serverNodeNamePrefix = "n_";
 
+        private static String NODE_JOINED = "join";
+        private static String NODE_FAILED = "fail";
+
         public delegate void UpdateDataToPhaseDelegate(int phase);
+        public delegate List<ServerData> DeleteOldDataDelegate(List<ServerData> servers, String joinedAirline);
 
         private ZooKeeper zk;
         private AutoResetEvent connectedSignal = new AutoResetEvent(false);
@@ -31,18 +36,20 @@ namespace HW3_Zookeeper
         private String airline;
         private String url;
         private UpdateDataToPhaseDelegate updateDataToPhaseDelegate;
+        private DeleteOldDataDelegate deleteOldDataDelegate;
         
         private String ephemeralNodeName;
         private bool isLeader;
         private int phase = 0;
         private Dictionary<int, List<ServerData>> phases = new Dictionary<int,List<ServerData>>();
 
-        public Distributer(String alliance, String airline, String url, UpdateDataToPhaseDelegate updateDataToPhaseDelegate)
+        public Distributer(String alliance, String airline, String url, UpdateDataToPhaseDelegate updateDataToPhaseDelegate, DeleteOldDataDelegate deleteOldDataDelegate)
         {
             this.alliance = alliance;
             this.airline = airline;
             this.url = url;
             this.updateDataToPhaseDelegate = updateDataToPhaseDelegate;
+            this.deleteOldDataDelegate = deleteOldDataDelegate;
             
             this.zk = new ZooKeeper(getAddress(), new TimeSpan(1, 0, 0, 0), this);
             this.connectedSignal.WaitOne();
@@ -68,6 +75,24 @@ namespace HW3_Zookeeper
             {
                 this.zk.Create(phaseBarrierPath, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
             }
+
+            String alliancePhaseBarrierPath = phaseBarrierPath + "/" + this.alliance;
+            if (this.zk.Exists(alliancePhaseBarrierPath, false) == null)
+            {
+                this.zk.Create(alliancePhaseBarrierPath, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
+            }
+
+            String deleteBarrierPath = barriersNodeName + deleteBarrierNodeName;
+            if (this.zk.Exists(deleteBarrierPath, false) == null)
+            {
+                this.zk.Create(deleteBarrierPath, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
+            }
+
+            String allianceDeleteBarrierPath = deleteBarrierPath + "/" + this.alliance;
+            if (this.zk.Exists(allianceDeleteBarrierPath, false) == null)
+            {
+                this.zk.Create(allianceDeleteBarrierPath, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Persistent);
+            }
         }
 
         public void Process(WatchedEvent @event)
@@ -78,7 +103,7 @@ namespace HW3_Zookeeper
             }
             if (@event.Type == EventType.NodeChildrenChanged)
             {            
-                algorithm();
+                algorithm(false);
             }
         }
 
@@ -99,7 +124,7 @@ namespace HW3_Zookeeper
 
             this.phases[this.phase] = new List<ServerData>() { serverNode };
 
-            algorithm();
+            algorithm(true);
         }
 
         public void leave()
@@ -117,7 +142,7 @@ namespace HW3_Zookeeper
             return this.phases[this.phase];
         }
 
-        private void algorithm()
+        private void algorithm(bool isIJoined)
         {
             String allianceInServersNode = rootNodeName + "/" + this.alliance;
             
@@ -125,8 +150,10 @@ namespace HW3_Zookeeper
 
             setLeader(allianceInServersNode, serverNodes);
 
-            String phaseBarrierPath = barriersNodeName + phaseBarrierNodeName;
-            Barrier phaseBarrier = new Barrier(getAddress(), phaseBarrierPath, serverNodes.Count() - 1);
+            Console.WriteLine("Start update phase");
+            
+            String phaseBarrierPath = barriersNodeName + phaseBarrierNodeName + "/" + this.alliance;
+            LeaderBarrier phaseBarrier = new LeaderBarrier(getAddress(), phaseBarrierPath, serverNodes.Count() - 1);
 
             int newPhase = this.phase;
             
@@ -161,16 +188,16 @@ namespace HW3_Zookeeper
                 foreach (String serverNode in serverNodes)
                 {
                     String airlineInServerNode = allianceInServersNode + "/" + serverNode;
-                    ServerData serverData = null;
+                    Stat s = new Stat();
+                    ServerData serverData = ServerData.deserialize(getString(this.zk.GetData(airlineInServerNode, false, s)));
                     foreach (ServerData sd in this.phases[newPhase])
                     {
-                        if (sd.airline.Equals(this.airline))
+                        if (serverData.airline.Equals(sd.airline))
                         {
-                            serverData = sd;
+                            this.zk.SetData(airlineInServerNode, getBytes(ServerData.serialize(sd)), -1);
                             break;
                         }
                     }
-                    this.zk.SetData(airlineInServerNode, getBytes(ServerData.serialize(serverData)), -1);
                 }
 
             }
@@ -213,6 +240,71 @@ namespace HW3_Zookeeper
             phaseBarrier.Leave();
             Console.WriteLine("after leave");
 
+            Console.WriteLine("Start delete old data");
+
+            String deleteBarrierPath = barriersNodeName + deleteBarrierNodeName + "/" + this.alliance;
+            Barrier deleteBarrier = new Barrier(getAddress(), deleteBarrierPath, this.airline, serverNodes.Count());
+
+            Console.WriteLine("before enter");            
+            deleteBarrier.Enter();
+            Console.WriteLine("after enter");
+
+            if (!isIJoined)
+            {
+                String action = null;
+                String airlineChanged = null;
+
+                List<String> prevNodes = new List<string>();
+                foreach (ServerData serverData in this.phases[this.phase])
+                {
+                    prevNodes.Add(serverData.airline);
+                }
+
+                List<String> currNodes = new List<string>();
+                List<ServerData> serversData = new List<ServerData>();
+                foreach (String airline in serverNodes)
+                {
+                    String airlineInAllianceNode = allianceInServersNode + "/" + airline;
+                    Stat s = new Stat();
+                    ServerData sd = ServerData.deserialize(getString(this.zk.GetData(airlineInAllianceNode, false, s)));
+                    currNodes.Add(sd.airline);
+                    serversData.Add(sd);
+                }
+
+                if (currNodes.Count() > prevNodes.Count())
+                {
+                    action = NODE_JOINED;
+                    airlineChanged = currNodes.Except(prevNodes).First();
+                    Console.WriteLine("node joined - " + airlineChanged);
+                }
+                else
+                {
+                    action = NODE_FAILED;
+                    airlineChanged = prevNodes.Except(currNodes).First();
+                    Console.WriteLine("node failed - " + airlineChanged);
+                }
+
+                if (action.Equals(NODE_JOINED))
+                {
+                    List<ServerData> serversDataAfterDeletion = this.deleteOldDataDelegate(serversData, airlineChanged);
+
+                    //if (this.isleader)
+                    //{
+                    //    console.writeline("leader");
+                    //    foreach (serverdata serverdata in serversdataafterdeletion)
+                    //    {
+                    //        console.writeline("set data to: " + serverdata.airline);
+                    //        this.zk.setdata(allianceinserversnode + "/" + serverdata.airline, getbytes(serverdata.serialize(serverdata)), -1);
+                    //        console.writeline("after set data");
+                    //    }
+                    //}
+                }
+            }
+            
+            Console.WriteLine("before leave");
+            deleteBarrier.Leave();
+            Console.WriteLine("after leave");
+        
         }
 
         private void setLeader(String serversPath, IEnumerable<String> serverNodes)

@@ -3,32 +3,30 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using ZooKeeperNet;
+using Org.Apache.Zookeeper.Data;
 using System.Threading;
 
 namespace HW3_Zookeeper
 {
-    class Barrier : IWatcher
+    class LeaderBarrier : IWatcher
     {
         private ZooKeeper zk;
         private AutoResetEvent connectedSignal = new AutoResetEvent(false);
         private String root;
-        private String name;
         private int size;
         
         private readonly Object mutex = new Object();
 
-        public Barrier(String address, String root, String name, int size)
+        public LeaderBarrier(String address, String root, int size)
         {
             this.zk = new ZooKeeper(address, new TimeSpan(1, 0, 0, 0), this);
             this.connectedSignal.WaitOne();
             this.root = root;
-            this.name = name;
             this.size = size;
        }
 
         public bool Enter()
         {
-            zk.Create(this.root + "/" + this.name, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Ephemeral);
             while (true)
             {
                 lock (this.mutex)
@@ -48,7 +46,6 @@ namespace HW3_Zookeeper
 
         public bool Leave()
         {
-            zk.Delete(this.root + "/" + this.name, -1);
             while (true)
             {
                 lock (this.mutex)
