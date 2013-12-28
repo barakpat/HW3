@@ -15,8 +15,6 @@ namespace AirlineServer
     {
         
         
-        //int reservationId = 0;
-
         public String IP
         {
             get { return Program.LocalIPAddress(); }
@@ -49,7 +47,6 @@ namespace AirlineServer
             this.proxy = new WebChannelFactory<ISellerService>(new Uri(args[4]));
             this.channel = this.proxy.CreateChannel();
             this.airlineCommunicationServer.distributer = new Distributer(this.alliance, this.airline, this.AllienceUri);
-            //distributer = new Distributer(this.alliance, this.airline, this.AllienceUri);
         }
 
         
@@ -84,106 +81,10 @@ namespace AirlineServer
         }
 
         
-        /*
-        public Flights SearchSrcAndDst(String src, String dst, DateTime date)
-        {
-            Flights resFlights = new Flights();
-
-            foreach (ServerFlight f in flights)
-            {
-                if (f.Src == src &&  f.Dst == dst && f.Date == date)
-                {
-                    resFlights.Add(new Flight(f));
-                }
-
-            }
-            return resFlights;
-        }
-
-        public Flights SearchToDstNotFromSrc(String src, String dst, DateTime date)
-        {
-            Flights resFlights = new Flights();
-
-            foreach (ServerFlight f in flights)
-            {
-                if (f.Src != src &&  f.Dst == dst && f.Date == date)
-                {
-                    resFlights.Add(new Flight(f));
-                }
-
-            }
-            return resFlights;
-        }
-
-        public Flights SearchFromSrcNotToDst(String src,String dst, DateTime date)
-        {
-            Flights resFlights = new Flights();
-
-            foreach (ServerFlight f in flights)
-            {
-                if (f.Src == src && f.Dst != dst && f.Date == date)
-                {
-                    resFlights.Add(new Flight(f));
-                }
-
-            }
-            return resFlights;
-        }
-        */
-
-
         public ConnectionFlights Search(String src, String dst, DateTime date, String airline)
         {
             
-            /*
-            Flights srcDstFlights = new Flights();
-            Flights srcFlights = new Flights();
-            Flights dstFlightsDay1 = new Flights();
-            Flights dstFlightsDay2 = new Flights();
-            
-            //create connection to other servers - TODO should be outside the function
-            
-
-            ConnectionFlights resFlights = new ConnectionFlights();
-            
-           
-            Flights srcDstFlightsDay1 = this.SearchSrcAndDst(src, dst, date);
-          //  Flights srcDstFlightsDay2 = this.SearchSrcAndDst(src, dst, date.AddDays(1));
-
-            Flights srcFlightsDay1 = this.SearchFromSrcNotToDst(src, dst, date);
-            //Flights srcFlightsDay2 = this.SearchFromSrc(src, date.AddDays(1));
-            dstFlightsDay1 = this.SearchToDstNotFromSrc(src,  dst, date);
-            dstFlightsDay2 = this.SearchToDstNotFromSrc(src,  dst, date.AddDays(1));
-
-            foreach (Flight f in srcDstFlightsDay1)
-            {
-                    resFlights.Add(new ConnectionFlight(f));
-            }
-
-            foreach (Flight f1 in srcFlightsDay1)
-            {
-                foreach (Flight f2 in dstFlightsDay1)
-                {
-                    if (f1.Dst == f2.Src)
-                    {
-                         resFlights.Add(new ConnectionFlight(f1,f2));
-                    }
-                }
-                foreach (Flight f2 in dstFlightsDay2)
-                {
-                    if (f1.Dst == f2.Src)
-                    {
-                        resFlights.Add(new ConnectionFlight(f1, f2));
-                    }
-                }
-            }
-
-            Console.WriteLine("Search: " + "src: " + src + " " + "dst: " + dst + " " + "date: " + date + " ");
-
-            return resFlights;
-            */
             return this.airlineCommunicationServer.SearchAllServers(src, dst, date, airline);
-            
         }
 
         
