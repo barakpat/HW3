@@ -9,9 +9,17 @@ namespace HW3_Zookeeper
     {
         static void Main(string[] args)
         {
-            Distributer d = new Distributer(args[0], args[1], args[2]);
+            HW3_Zookeeper.Distributer.UpdateDataToPhaseDelegate updateDataToPhaseDelegate = updateDataToPhase;
+            Distributer d = new Distributer(args[0], args[1], args[2], updateDataToPhaseDelegate);
             d.join();
             Console.ReadKey();
+            d.leave();
+            Console.ReadKey();
+        }
+
+        public static void updateDataToPhase(int phase)
+        {
+            Console.WriteLine("new phase: " + phase);
         }
     }
 }
