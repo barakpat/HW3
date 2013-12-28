@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using ZooKeeperNet;
 using Org.Apache.Zookeeper.Data;
+using System.Threading;
 
 //TODO: what to do when all the servers inside alliance failed? remove the alliance node? inform the search server?
 
@@ -23,6 +24,8 @@ namespace HW3_Zookeeper
 
         private ZooKeeper zk;
         
+        private AutoResetEvent connectedSignal = new AutoResetEvent(false);
+
         private String alliance;
         private String airline;
         private String url;
@@ -40,7 +43,8 @@ namespace HW3_Zookeeper
             this.url = url;
             
             this.zk = new ZooKeeper(getAddress(), new TimeSpan(1, 0, 0, 0), this);
-            
+            this.connectedSignal.WaitOne();
+           
             Stat s = this.zk.Exists(rootNodeName, false);
             if (s == null)
             {
@@ -78,6 +82,10 @@ namespace HW3_Zookeeper
 
         public void Process(WatchedEvent @event)
         {
+            if (@event.State == KeeperState.SyncConnected && @event.Type == EventType.None)
+            {
+                this.connectedSignal.Set();
+            }
             if (@event.Type == EventType.NodeChildrenChanged && @event.Path.StartsWith(rootNodeName + serversNodeName))
             {            
                 handleChange();

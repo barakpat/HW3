@@ -37,7 +37,10 @@ namespace AirlineServer
                     airlineServer.joinCluster();
                     airlineServer.registerDelegate("http://" + LocalIPAddress() + ":" + airlineServer.searchPort + "/services");
                     
-                        
+
+                    // old- hw1
+                    //airlineServer.registerSeller("http://" + LocalIPAddress() + ":" + args[0] + "/services");
+
                     Console.WriteLine("Airline server,' " + airlineServer.airline + "', is up and running listenning to port " + airlineServer.searchPort);
                     Console.ReadKey();
 

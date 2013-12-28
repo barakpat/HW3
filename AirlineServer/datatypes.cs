@@ -118,6 +118,34 @@ namespace HW1c
 
 
     [DataContract]
+    public class AirlineFlightsData
+    {
+        [DataMember]
+        public Flights flights { get; set; }
+        [DataMember]
+        public String airlineName { get; set; }
+        [DataMember]
+        public Boolean backup { get; set; }
+    }
+
+    [DataContract]
+    public class AirlineServerData
+    {
+        [DataMember]
+        public String airlineName { get; set; }
+        [DataMember]
+        public Uri airlineURI { get; set; }
+    }
+
+    [CollectionDataContract
+   (Name = "AllienceDataImage",
+   ItemName = "entry",
+   KeyName = "airline",
+   ValueName = "airlineData")]
+    public class AirlinesFlightsData : Dictionary<String, AirlineFlightsData> { }
+
+
+    [DataContract]
     public class AllianceDelegate
     {
         [DataMember]
