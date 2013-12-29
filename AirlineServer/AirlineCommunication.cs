@@ -17,14 +17,14 @@ namespace AirlineServer
         readonly static int initialVersion = -1;
         readonly static int minimalNumberOfCopies = 2;
         int currentVersion = initialVersion;
-        AirlineFlightsData airlineFlightsData = new AirlineFlightsData();
-        AirlinesFlightsData airlinesFlightsData = new AirlinesFlightsData();
+       // AirlineFlightsData airlineFlightsData = new AirlineFlightsData();
+        //AirlinesFlightsData airlinesFlightsData = new AirlinesFlightsData();
         
         // Sever data with versioning
         Dictionary<int, AirlinesFlightsData> serverData = new Dictionary<int, AirlinesFlightsData>();
         
        // Dictionary<string, List<Flight> > airlineFlights = new Dictionary<string, List<Flight> >();
-        List<String> serverAirlines = new List<String>();
+       // List<String> serverAirlines = new List<String>();
         String serverName;
         
         public Distributer distributer { get; set; }
@@ -32,7 +32,7 @@ namespace AirlineServer
         public AirlineCommunication(string[] args) 
         {
             this.serverName = args[0];
-            this.serverAirlines.Add(this.serverName);
+           // this.serverAirlines.Add(this.serverName);
             this.initializeFlights(args[5]);
 
         }
@@ -89,11 +89,11 @@ namespace AirlineServer
         }
 
         // replication algorithm delegate method
-        public List<ServerData> backUp()
+        public List<ServerData> backUp(List<ServerData> allienceServers)
         {
-            List<ServerData> allienceServers = this.distributer.getServers();
             AirlinesFlightsData tmpAirlinesFlightsData = getCurrentPhaseDate();
-            foreach (String airline in tmpAirlinesFlightsData.Keys)
+            List<String> myAirline = new List<string>(tmpAirlinesFlightsData.Keys);
+            foreach (String airline in myAirline)
             {
                 if (!isBackedUp(airline, allienceServers))
                 {
@@ -169,13 +169,16 @@ namespace AirlineServer
             
             // should never reach here
             Console.WriteLine("Code should never reach here");
-            Console.WriteLine("airline server : " + airlineFlightsData.airlineName);
+            Console.WriteLine("airline server : " + this.getAirlineServers().First());
             return allienceServers[0];
         }
 
         private bool isBackedUp(string airline, List<ServerData> allienceServers)
         {
             int numberOfCopies = 0;
+            
+            if ( allienceServers.Count() == 1) return true;
+            
             foreach (ServerData server in allienceServers)
             {
                 foreach(AirlineData a in  server.airlines){
@@ -191,7 +194,7 @@ namespace AirlineServer
 
         public Boolean moveAirline(AirlineFlightsData airline)
         {
-            foreach (AirlineFlightsData arFlightData in this.airlinesFlightsData.Values)
+            foreach (AirlineFlightsData arFlightData in this.getCurrentPhaseDate().Values)
             {
                 // if exists, replace and return
                 if (arFlightData.airlineName == airline.airlineName && arFlightData.backup == airline.backup)
@@ -202,7 +205,7 @@ namespace AirlineServer
 
             }
             // add new entry 
-            this.airlinesFlightsData.Add(airline.airlineName, airline);
+            this.getCurrentPhaseDate().Add(airline.airlineName, airline);
             return true;
         }
 
@@ -265,7 +268,7 @@ namespace AirlineServer
 
             // algorithm 
 
-            foreach (String ar in serverAirlines)
+            foreach (String ar in this.getAirlineServers())
             {
                 Flights srcDstFlights = new Flights();
                 Flights srcFlights = new Flights();
@@ -290,6 +293,13 @@ namespace AirlineServer
             Console.WriteLine("Search one server: "+  this.serverName  + " src: " + src + " " + "dst: " + dst + " " + "date: " + date + " " + " airline: "+ airline);
 
             return resAirlinesFlights;
+        }
+
+        private IEnumerable<string> getAirlineServers()
+        {
+            AirlinesFlightsData serverData = getCurrentPhaseDate();
+            return serverData.Keys;
+
         }
 
         private Flights getAirlineFlightsWithoutSrc(string ar, string src, string dst, DateTime date)
@@ -447,12 +457,13 @@ namespace AirlineServer
 
            
             // initialize airlineFlightData
-            this.airlineFlightsData.airlineName = this.serverName;
-            this.airlineFlightsData.flights =  new Flights(flights);
-            this.airlineFlightsData.backup = false;
+            AirlineFlightsData airlineFlightsData = new AirlineFlightsData();
+            airlineFlightsData.airlineName = this.serverName;
+            airlineFlightsData.flights =  new Flights(flights);
+            airlineFlightsData.backup = false;
             
             AirlinesFlightsData allienceDataImage = new AirlinesFlightsData();
-            allienceDataImage.Add(this.serverName, this.airlineFlightsData);
+            allienceDataImage.Add(this.serverName, airlineFlightsData);
             serverData.Add(this.currentVersion, allienceDataImage);
 
             file.Close();
