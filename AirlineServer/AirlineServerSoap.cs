@@ -48,8 +48,9 @@ namespace AirlineServer
             this.alliancePort = args[3];
             this.proxy = new WebChannelFactory<ISellerService>(new Uri(args[4]));
             this.channel = this.proxy.CreateChannel();
-            HW3_Zookeeper.Distributer.UpdateDataToPhaseDelegate del = airlineCommunicationServer.updatePhase;
-            this.airlineCommunicationServer.distributer = new Distributer(this.alliance, this.airline, this.AllienceUri, del);
+            HW3_Zookeeper.Distributer.UpdateDataToPhaseDelegate del1 = airlineCommunicationServer.updatePhase;
+            HW3_Zookeeper.Distributer.DeleteOldDataDelegate del2 = airlineCommunicationServer.deleteOldData;
+            this.airlineCommunicationServer.distributer = new Distributer(this.alliance, this.airline, this.AllienceUri, del1, del2);
         }
 
         
@@ -65,6 +66,11 @@ namespace AirlineServer
 
         public bool isDelegate() {
             return this.airlineCommunicationServer.distributer.isDelegate();
+        }
+
+
+        public void delegateChosen(){
+            this.registerDelegate(this.SearchUri);
         }
 
         public void registerSeller(string URI)
