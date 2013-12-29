@@ -261,6 +261,7 @@ namespace HW3_Zookeeper
                 if (action.Equals(NODE_JOINED))
                 {
                     List<ServerData> serversDataAfterDeletion = this.deleteOldDataDelegate(serversData, airlineChanged);
+                    setServers(this.phase, serversDataAfterDeletion);
 
                     if (this.isLeader)
                     {
