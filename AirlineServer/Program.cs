@@ -35,7 +35,7 @@ namespace AirlineServer
 
                     // TODO -join cluster
                     airlineServer.joinCluster();
-                    airlineServer.registerDelegate("http://" + LocalIPAddress() + ":" + airlineServer.searchPort + "/services");
+                    //airlineServer.registerDelegate("http://" + LocalIPAddress() + ":" + airlineServer.searchPort + "/services");
                     
                     Console.WriteLine("Airline server,' " + airlineServer.airline + "', is up and running listenning to port " + airlineServer.searchPort);
                     Console.ReadKey();

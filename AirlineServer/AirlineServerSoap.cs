@@ -50,7 +50,8 @@ namespace AirlineServer
             this.channel = this.proxy.CreateChannel();
             HW3_Zookeeper.Distributer.UpdateDataToPhaseDelegate del1 = airlineCommunicationServer.updatePhase;
             HW3_Zookeeper.Distributer.DeleteOldDataDelegate del2 = airlineCommunicationServer.deleteOldData;
-            this.airlineCommunicationServer.distributer = new Distributer(this.alliance, this.airline, this.AllienceUri, del1, del2);
+            HW3_Zookeeper.Distributer.LeaderDelegate del0 = this.delegateChosen;
+            this.airlineCommunicationServer.distributer = new Distributer(this.alliance, this.airline, this.AllienceUri, del0, del1, del2);
         }
 
         
