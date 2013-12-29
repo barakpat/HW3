@@ -6,7 +6,7 @@ using ZooKeeperNet;
 using Org.Apache.Zookeeper.Data;
 using System.Threading;
 
-//TODO: what to do when all the servers inside alliance failed? remove the alliance node? inform the search server?
+//TODO: remove leader's zookeeper update between the leave and enter to make sure that everybody works on the previous verion of data
 
 namespace HW3_Zookeeper
 {
@@ -20,6 +20,7 @@ namespace HW3_Zookeeper
         private static String barriersNodeName = "/barriers";
         private static String phaseBarrierNodeName = "/phase";
         private static String deleteBarrierNodeName = "/delete";
+        private static String backupBarrierNodeName = "/backup";
 
         private static String serverNodeNamePrefix = "n_";
 
@@ -29,6 +30,7 @@ namespace HW3_Zookeeper
         public delegate void LeaderDelegate();
         public delegate void UpdateDataToPhaseDelegate(int phase);
         public delegate List<ServerData> DeleteOldDataDelegate(List<ServerData> servers, String joinedAirline);
+        public delegate List<ServerData> BackupDelegate(List<ServerData> servers);
 
         private ZooKeeper zk;
         private AutoResetEvent connectedSignal = new AutoResetEvent(false);
@@ -39,13 +41,14 @@ namespace HW3_Zookeeper
         private LeaderDelegate leaderDelegate;
         private UpdateDataToPhaseDelegate updateDataToPhaseDelegate;
         private DeleteOldDataDelegate deleteOldDataDelegate;
+        private BackupDelegate backupDelegate;
         
         private String ephemeralNodeName;
         private bool isLeader;
         private int phase = 0;
         private Dictionary<int, List<ServerData>> phases = new Dictionary<int,List<ServerData>>();
 
-        public Distributer(String alliance, String airline, String url, LeaderDelegate leaderDelegate, UpdateDataToPhaseDelegate updateDataToPhaseDelegate, DeleteOldDataDelegate deleteOldDataDelegate)
+        public Distributer(String alliance, String airline, String url, LeaderDelegate leaderDelegate, UpdateDataToPhaseDelegate updateDataToPhaseDelegate, DeleteOldDataDelegate deleteOldDataDelegate, BackupDelegate backupDelegate)
         {
             this.alliance = alliance;
             this.airline = airline;
@@ -53,6 +56,7 @@ namespace HW3_Zookeeper
             this.leaderDelegate = leaderDelegate;
             this.updateDataToPhaseDelegate = updateDataToPhaseDelegate;
             this.deleteOldDataDelegate = deleteOldDataDelegate;
+            this.backupDelegate = backupDelegate;
             
             this.zk = new ZooKeeper(getAddress(), new TimeSpan(1, 0, 0, 0), this);
             this.connectedSignal.WaitOne();
@@ -65,12 +69,16 @@ namespace HW3_Zookeeper
             String alliancePhaseBarrierPath = phaseBarrierPath + "/" + this.alliance;
             String deleteBarrierPath = barriersNodeName + deleteBarrierNodeName;
             String allianceDeleteBarrierPath = deleteBarrierPath + "/" + this.alliance;
+            String backupBarrierPath = barriersNodeName + backupBarrierNodeName;
+            String allianceBackupBarrierPath = backupBarrierPath + "/" + this.alliance;
 
             createNodeIfNotExists(alliancePath, getBytes(AllianceData.serialize(new AllianceData())));
             createNodeIfNotExists(phaseBarrierPath, new byte[0]);
             createNodeIfNotExists(alliancePhaseBarrierPath, new byte[0]);
             createNodeIfNotExists(deleteBarrierPath, new byte[0]);
             createNodeIfNotExists(allianceDeleteBarrierPath, new byte[0]);
+            createNodeIfNotExists(backupBarrierPath, new byte[0]);
+            createNodeIfNotExists(allianceBackupBarrierPath, new byte[0]);
         }
 
         public void Process(WatchedEvent @event)
@@ -279,7 +287,44 @@ namespace HW3_Zookeeper
             Console.WriteLine("before leave");
             deleteBarrier.Leave();
             Console.WriteLine("after leave");
-        
+
+            Console.WriteLine("Start backup");
+
+            String backupBarrierPath = barriersNodeName + backupBarrierNodeName + "/" + this.alliance;
+            Barrier backupBarrier = new Barrier(getAddress(), backupBarrierPath, this.airline, serverNodes.Count());
+
+            Console.WriteLine("before enter");
+            backupBarrier.Enter();
+            Console.WriteLine("after enter");
+
+            List<ServerData> serversData2 = new List<ServerData>();
+            Dictionary<String, String> airlineToNodeName2 = new Dictionary<string, string>();
+            foreach (String airline in serverNodes)
+            {
+                String airlineInAllianceNode = allianceInServersNode + "/" + airline;
+                Stat s = new Stat();
+                ServerData sd = ServerData.deserialize(getString(this.zk.GetData(airlineInAllianceNode, false, s)));
+                serversData2.Add(sd);
+                airlineToNodeName2[sd.airline] = airline;
+            }
+
+            List<ServerData> serversDataAfterBackup = this.backupDelegate(serversData2);
+            setServers(this.phase, serversDataAfterBackup);
+
+            if (this.isLeader)
+            {
+                Console.WriteLine("leader");
+                foreach (ServerData serverData in serversDataAfterBackup)
+                {
+                    Console.WriteLine("set data to: " + airlineToNodeName2[serverData.airline]);
+                    this.zk.SetData(allianceInServersNode + "/" + airlineToNodeName2[serverData.airline], getBytes(ServerData.serialize(serverData)), -1);
+                    Console.WriteLine("after set data");
+                }
+            }
+
+            Console.WriteLine("before leave");
+            backupBarrier.Leave();
+            Console.WriteLine("after leave");
         }
 
         private void createNodeIfNotExists(String path, byte[] data)
