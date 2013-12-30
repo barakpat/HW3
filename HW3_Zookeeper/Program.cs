@@ -42,10 +42,10 @@ namespace HW3_Zookeeper
             return serversData;
         }
 
-        public static List<ServerData> balance(List<ServerData> serversData)
+        public static List<ServerData> balance(List<ServerData> servers, List<String> airlines, int newPhase)
         {
             Console.WriteLine("balance delegate");
-            return serversData;
+            return servers;
         }
     }
 }
