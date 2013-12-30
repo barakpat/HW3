@@ -247,18 +247,12 @@ namespace HW3_Zookeeper
                 setServers(newPhase, this.phases[this.phase]);
             }
 
-            this.phase = newPhase;
-
-            removeServers(newPhase);
-
-            Console.WriteLine("calling delegate");
-            this.updateDataToPhaseDelegate(newPhase);
+            updateDataToNewPhase(newPhase);
 
             Console.WriteLine("wait to leave barrier");
             phaseBarrier.Leave();
             Console.WriteLine("left");
 
-            //set zookeeper with new phase data
             if (this.isLeader)
             {
                 Console.WriteLine("update zookeeper");
@@ -418,17 +412,17 @@ namespace HW3_Zookeeper
             AllianceData allianceData = AllianceData.deserialize(getString(this.zk.GetData(allianceInServersNode, false, stat)));
             allianceData.airlines.Sort();
 
+            int newPhase = this.phase + 1;
+            
             Console.WriteLine("calling delegate");
-            List<ServerData> serversDataAfterBalance = this.balanceDelegate(serversData, allianceData.airlines, this.phase + 1);
-            setServers(this.phase + 1, serversDataAfterBalance);
+            List<ServerData> serversDataAfterBalance = this.balanceDelegate(serversData, allianceData.airlines, newPhase);
+            setServers(newPhase, serversDataAfterBalance);
 
             Console.WriteLine("wait to leave barrier");
             balanceBarrier.Leave();
             Console.WriteLine("left");
 
-            this.phase++;
-            removeServers(this.phase);
-            Console.WriteLine("moved to new phase");
+            updateDataToNewPhase(newPhase);
             
             if (this.isLeader)
             {
@@ -466,6 +460,16 @@ namespace HW3_Zookeeper
             }
         }
 
+        private void updateDataToNewPhase(int newPhase)
+        {
+            Console.WriteLine("calling delegate");
+            this.updateDataToPhaseDelegate(newPhase);
+
+            this.phase = newPhase;
+            removeServers(newPhase);
+            Console.WriteLine("moved to new phase");
+        }
+        
         private static String getAddress()
         {
             System.IO.StreamReader file = new System.IO.StreamReader(zookeeperConfigFilePath);
