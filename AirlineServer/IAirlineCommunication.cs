@@ -15,6 +15,6 @@ namespace AirlineServer
         AirlinesFlights Search(String src, String dst, DateTime date, String airline);
         
         [OperationContract]
-        Boolean moveAirline(AirlineFlightsData airline);
+        Boolean moveAirline(AirlineFlightsData airline, int phase);
     }
 }
