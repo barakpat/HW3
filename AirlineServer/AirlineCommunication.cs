@@ -17,7 +17,12 @@ namespace AirlineServer
         readonly static int initialVersion = -1;
         readonly static int minimalNumberOfCopies = 2;
         int currentVersion = initialVersion;
-       // AirlineFlightsData airlineFlightsData = new AirlineFlightsData();
+
+        // Dictionary of channel to the servers 
+        Dictionary<String, IAirlineCommunication> serversChannels = new Dictionary<string, IAirlineCommunication>();
+     
+        
+        // AirlineFlightsData airlineFlightsData = new AirlineFlightsData();
         //AirlinesFlightsData airlinesFlightsData = new AirlinesFlightsData();
         
         // Sever data with versioning
@@ -91,14 +96,26 @@ namespace AirlineServer
         // replication algorithm delegate method
         public List<ServerData> backUp(List<ServerData> allienceServers)
         {
+            //
+            this.updateChannelsList(allienceServers);
+            
             AirlinesFlightsData tmpAirlinesFlightsData = getCurrentPhaseDate();
             List<String> myAirline = new List<string>(tmpAirlinesFlightsData.Keys);
             foreach (String airline in myAirline)
             {
                 if (!isBackedUp(airline, allienceServers))
                 {
+                    // fetching the airline flight data
                     AirlineFlightsData airlineFlightsData = new AirlineFlightsData();
-                    tmpAirlinesFlightsData.TryGetValue(airline,out airlineFlightsData);
+                    tmpAirlinesFlightsData.TryGetValue(airline, out airlineFlightsData);
+                    
+                    // makign this copy to be the primary
+                    airlineFlightsData.backup = false;
+
+                    // if there is only 1 server running there is no backing up
+                    if (allienceServers.Count() == 1) continue;
+                    
+                    // more than 1 server so we are backing up
                     backupAirline(airlineFlightsData, allienceServers);
                 }
             }
@@ -106,16 +123,36 @@ namespace AirlineServer
             return newAllienceServers;
         }
 
+        private void updateChannelsList(List<ServerData> allienceServers)
+        {
+            foreach (ServerData server in allienceServers){
+                if (!this.serversChannels.ContainsKey(server.airline) && server.airline != this.serverName)
+                {
+                    this.serversChannels.Add(server.airline, createChannelForServer(server));
+                }
+            }
+
+            // Delete the not relevant connection in case of a failure
+            List<String> myServerChannelNames = new List<string>(this.serversChannels.Keys);
+            foreach (String serverName in myServerChannelNames)
+            {
+                if (!allienceServers.Exists(server => server.airline == serverName)){
+                    this.serversChannels.Remove(serverName);
+                }
+            }
+        }
+
         /**
          * Calculate the new allience state of the new servers
          */
         private List<ServerData> calcNewAllienceServersState(List<ServerData> allienceServers)
         {
+            List<ServerData> tmpAllienceServers = new List<ServerData>(allienceServers.ToList());
             foreach (ServerData server in allienceServers)
             {
                 foreach (AirlineData a in server.airlines)
                 {
-                    if (!isBackedUp(a.name, allienceServers))
+                    if (!isBackedUp(a.name, allienceServers) && (allienceServers.Count() != 1))
                     {
                         ServerData targetServer = findTargetServer(a.name, allienceServers);
                         AirlineData backupAirlineData = new AirlineData(a.name, !a.isPrimary);
@@ -135,6 +172,8 @@ namespace AirlineServer
         {
             ServerData targetServer = findTargetServer(airlineFlightsData.airlineName, allienceServers);
             AirlineFlightsData copyAirlineFlightsData = new AirlineFlightsData(airlineFlightsData, true); // creating the copy of the backup
+            
+            /*
             ServiceEndpoint httpEndpoint =
                            new ServiceEndpoint(
                            ContractDescription.GetContract(
@@ -145,6 +184,11 @@ namespace AirlineServer
             //// create channel factory based on HTTP endpoint
             ChannelFactory<IAirlineCommunication> channelFactory = new ChannelFactory<IAirlineCommunication>(httpEndpoint);
             IAirlineCommunication channel = channelFactory.CreateChannel();
+
+             */
+            
+            IAirlineCommunication channel;
+            this.serversChannels.TryGetValue(targetServer.airline, out channel);
             channel.moveAirline(copyAirlineFlightsData);
 
         }
@@ -177,7 +221,7 @@ namespace AirlineServer
         {
             int numberOfCopies = 0;
             
-            if ( allienceServers.Count() == 1) return true;
+         //   if ( allienceServers.Count() == 1) return true;
             
             foreach (ServerData server in allienceServers)
             {
@@ -228,18 +272,9 @@ namespace AirlineServer
                 }
                 else
                 {
-                        ServiceEndpoint httpEndpoint =
-                           new ServiceEndpoint(
-                           ContractDescription.GetContract(
-                           typeof(IAirlineCommunication)),
-                           new BasicHttpBinding(),
-                           new EndpointAddress
-                           (server.url + "/AirlineCommunication"));
-                        //// create channel factory based on HTTP endpoint
-                        ChannelFactory<IAirlineCommunication> channelFactory = new ChannelFactory<IAirlineCommunication>(httpEndpoint);
-                        IAirlineCommunication channel = channelFactory.CreateChannel();
-                        airlinesFlights = channel.Search(src, dst, date, airline);
-                    
+                    IAirlineCommunication channel;
+                    this.serversChannels.TryGetValue(server.airline, out channel);
+                    airlinesFlights = channel.Search(src, dst, date, airline);   
                 }
                 
                 foreach (var airlineFlights in airlinesFlights.Values){
@@ -255,6 +290,21 @@ namespace AirlineServer
             Console.WriteLine("Search all servers: " + "src: " + src + " " + "dst: " + dst + " " + "date: " + date + " ");
 
             return resFlights;
+        }
+
+        private static IAirlineCommunication createChannelForServer(ServerData server)
+        {
+            ServiceEndpoint httpEndpoint =
+               new ServiceEndpoint(
+               ContractDescription.GetContract(
+               typeof(IAirlineCommunication)),
+               new BasicHttpBinding(),
+               new EndpointAddress
+               (server.url + "/AirlineCommunication"));
+            //// create channel factory based on HTTP endpoint
+            ChannelFactory<IAirlineCommunication> channelFactory = new ChannelFactory<IAirlineCommunication>(httpEndpoint);
+            IAirlineCommunication channel = channelFactory.CreateChannel();
+            return channel;
         }
 
 
@@ -283,7 +333,7 @@ namespace AirlineServer
                 }
                 else
                 {
-                    airlineFlight = this.getAirlineFlightsWithoutSrc(ar, src, dst, date); // get only conncetion filghts of this airline (destination)          
+                    airlineFlight = new Flights(); //this.getAirlineFlightsWithoutSrc(ar, src, dst, date); // get only conncetion filghts of this airline (destination)          
                 }
                 
                 sortFlights(src, dst, date, srcDstFlights, srcFlights, dstFlightsDay1, dstFlightsDay2, airlineFlight);

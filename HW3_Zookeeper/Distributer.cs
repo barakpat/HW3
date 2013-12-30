@@ -101,7 +101,7 @@ namespace HW3_Zookeeper
             this.ephemeralNodeName = this.zk.Create(allianceInRootNode + "/" + serverNodeNamePrefix, getBytes(ServerData.serialize(serverNode)), Ids.OPEN_ACL_UNSAFE, CreateMode.EphemeralSequential).Replace(allianceInRootNode + "/", "");
 
             Stat s = new Stat();
-            AllianceData allianceData = AllianceData.deserialize(getString(this.zk.GetData(allianceInRootNode, true, s)));
+            AllianceData allianceData = AllianceData.deserialize(getString(this.zk.GetData(allianceInRootNode, false, s)));
             if (!allianceData.airlines.Contains(this.airline))
             {
                 allianceData.airlines.Add(this.airline);
