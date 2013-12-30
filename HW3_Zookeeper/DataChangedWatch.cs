@@ -32,8 +32,6 @@ namespace HW3_Zookeeper
         
         public void Process(WatchedEvent @event)
         {
-            Console.WriteLine("data watch event - state: " + @event.State);
-            Console.WriteLine("data watch event - path: " + @event.Path + " event: " + @event.Type);
             if (@event.State == KeeperState.SyncConnected && @event.Type == EventType.None)
             {
                 this.connectedSignal.Set();
