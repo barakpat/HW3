@@ -56,7 +56,8 @@ namespace AirlineServer
             else if (this.serverData.Keys.Contains(p))
             {
                 this.currentVersion = p;
-                foreach (int key in this.serverData.Keys)
+                
+                foreach (int key in new List<int>(this.serverData.Keys))
                 {
                     if (key != p) this.serverData.Remove(key);
                 }
@@ -96,6 +97,11 @@ namespace AirlineServer
         {
             AirlinesFlightsData tmpAirlinesFlightsData = new AirlinesFlightsData();
             this.serverData.TryGetValue(phase, out tmpAirlinesFlightsData);
+            if (tmpAirlinesFlightsData == null)
+            {
+                tmpAirlinesFlightsData = new AirlinesFlightsData();
+                this.serverData.Add(phase, tmpAirlinesFlightsData);
+            }
             return tmpAirlinesFlightsData;
         }
 
@@ -241,6 +247,7 @@ namespace AirlineServer
         public Boolean moveAirline(AirlineFlightsData airline, int phase)
         {
 
+            
             List<AirlineFlightsData> airlineFlightDataList = new List<AirlineFlightsData>(this.getCurrentPhaseDate(phase).Values);
             foreach (AirlineFlightsData arFlightData in airlineFlightDataList)
             {
@@ -260,7 +267,12 @@ namespace AirlineServer
         public List<ServerData> balance(List<ServerData> allienceServers, List<String> airlines,  int phase)
         {
             // if there is only 1 server no need for balance
-            if (allienceServers.Count == 1) return allienceServers;
+            if (allienceServers.Count == 1)
+            {
+                serverData.Add(phase, getCurrentPhaseDate());
+                return allienceServers;
+            } 
+
 
             AirlinesFlightsData tmpAirlinesFlightsData = getCurrentPhaseDate();
             List<AirlineFlightsData> myAirline = new List<AirlineFlightsData>(tmpAirlinesFlightsData.Values);
@@ -270,9 +282,17 @@ namespace AirlineServer
             foreach (AirlineFlightsData airline in myAirline){
                 String tergetServer = this.calcTargetServerAfterBalance(airline, nextPhaseImage);
 
-                //send the data to the target server to the next phase
                 IAirlineCommunication channel;
-                this.serversChannels.TryGetValue(tergetServer, out channel);
+                if (tergetServer == this.serverName)
+                {
+                    channel = this;
+                }
+                else
+                {
+                    this.serversChannels.TryGetValue(tergetServer, out channel);
+
+                }
+                //send the data to the target server to the next phase
                 channel.moveAirline(airline, phase);   
 
             }
