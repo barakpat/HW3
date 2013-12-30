@@ -13,22 +13,24 @@ namespace HW3_Zookeeper
         private AutoResetEvent connectedSignal = new AutoResetEvent(false);
         private String root;
         private String name;
+        private byte[] data;
         private int size;
         
         private readonly Object mutex = new Object();
 
-        public Barrier(String address, String root, String name, int size)
+        public Barrier(String address, String root, String name, byte[] data, int size)
         {
             this.zk = new ZooKeeper(address, new TimeSpan(1, 0, 0, 0), this);
             this.connectedSignal.WaitOne();
             this.root = root;
             this.name = name;
+            this.data = data;
             this.size = size;
        }
 
         public bool Enter()
         {
-            zk.Create(this.root + "/" + this.name, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.Ephemeral);
+            zk.Create(this.root + "/" + this.name, this.data, Ids.OPEN_ACL_UNSAFE, CreateMode.Ephemeral);
             while (true)
             {
                 lock (this.mutex)
