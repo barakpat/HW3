@@ -67,7 +67,7 @@ namespace AirlineServer
 
             }
 
-            Console.WriteLine("The phse is not in the data , Something is wronge");
+            Console.WriteLine("The phase is not in the data , Something is wronge");
         }
 
         // replication algorithm delegate method
@@ -268,15 +268,28 @@ namespace AirlineServer
             List<ServerData> nextPhaseImage = this.calcNextPhaseImage(allienceServers, airlines);
 
             foreach (AirlineFlightsData airline in myAirline){
-                String tergetServer = this.calcTargetServerAfterBalance(airline, allienceServers, airlines);
+                String tergetServer = this.calcTargetServerAfterBalance(airline, nextPhaseImage);
 
-                // send the data to the target server to the next phase
-                //IAirlineCommunication channel;
-                //this.serversChannels.TryGetValue(tergetServer, out channel);
-                //channel.moveAirline(airline, phase);   
+                //send the data to the target server to the next phase
+                IAirlineCommunication channel;
+                this.serversChannels.TryGetValue(tergetServer, out channel);
+                channel.moveAirline(airline, phase);   
 
             }
             return allienceServers;
+        }
+
+        private string calcTargetServerAfterBalance(AirlineFlightsData airline, List<ServerData> nextPhaseImage)
+        {
+            foreach (ServerData s in nextPhaseImage)
+            {
+                 if (s.airlines.Exists(a=> (a.name == airline.airlineName && a.isPrimary != airline.backup))){
+                      return s.airline;
+                 }
+            }
+
+            Console.WriteLine("THIS CODE SHOULD NEVER BE CALLED!!!!!! THIS MEAN THAT THE AIRLINE DATE DOES NOT EXISTS IN THE NEW IMAGE");
+            return airline.airlineName;
         }
 
         public List<ServerData> balance1(List<ServerData> allienceServers)

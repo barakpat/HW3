@@ -52,7 +52,7 @@ namespace AirlineServer
             HW3_Zookeeper.Distributer.UpdateDataToPhaseDelegate del1 = airlineCommunicationServer.updatePhase;
             HW3_Zookeeper.Distributer.DeleteOldDataDelegate del2 = airlineCommunicationServer.deleteOldData;
             HW3_Zookeeper.Distributer.BackupDelegate del3 = airlineCommunicationServer.backUp;
-            HW3_Zookeeper.Distributer.BalanceDelegate del4 = airlineCommunicationServer.balance1;
+            HW3_Zookeeper.Distributer.BalanceDelegate del4 = airlineCommunicationServer.balance;
             this.airlineCommunicationServer.distributer = new Distributer(this.alliance, this.airline, this.AllienceUri, del0, del1, del2, del3, del4);
         }
 
