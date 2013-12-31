@@ -17,7 +17,6 @@ namespace HW3_Zookeeper
             Distributer d = new Distributer(args[0], args[1], args[2], leaderDelegate, updateDataToPhaseDelegate, deleteOldDataDelegate, backupDelegate, balanceDelegate);
             d.join();
             Console.ReadKey();
-            d.leave();
             d.Dispose();
         }
         

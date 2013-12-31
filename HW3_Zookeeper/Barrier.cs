@@ -7,10 +7,9 @@ using System.Threading;
 
 namespace HW3_Zookeeper
 {
-    class Barrier : IWatcher, IDisposable
+    class Barrier : IWatcher
     {
         private ZooKeeper zk;
-        private AutoResetEvent connectedSignal = new AutoResetEvent(false);
         private String root;
         private String name;
         private byte[] data;
@@ -18,12 +17,9 @@ namespace HW3_Zookeeper
         
         private readonly Object mutex = new Object();
 
-//        public Barrier(String address, String root, String name, byte[] data, int size)
         public Barrier(ZooKeeper zk, String root, String name, byte[] data, int size)
         {
-            //this.zk = new ZooKeeper(address, new TimeSpan(1, 0, 0, 0), this);
             this.zk = zk;
-//            this.connectedSignal.WaitOne();
             this.root = root;
             this.name = name;
             this.data = data;
@@ -37,7 +33,6 @@ namespace HW3_Zookeeper
             {
                 lock (this.mutex)
                 {
-//                    IEnumerable<String> list = this.zk.GetChildren(this.root, true);
                     IEnumerable<String> list = this.zk.GetChildren(this.root, this);
                     if (list.Count() < this.size)
                     {
@@ -58,7 +53,6 @@ namespace HW3_Zookeeper
             {
                 lock (this.mutex)
                 {
-//                    IEnumerable<String> list = this.zk.GetChildren(this.root, true);
                     IEnumerable<String> list = this.zk.GetChildren(this.root, this);
                     if (list.Count() > 0)
                     {
@@ -74,13 +68,6 @@ namespace HW3_Zookeeper
 
         public void Process(WatchedEvent @event)
         {
-            Console.WriteLine(@event.State);
-            Console.WriteLine(@event.Type);
-
-            if (@event.State == KeeperState.SyncConnected && @event.Type == EventType.None)
-            {
-                this.connectedSignal.Set();
-            }
             if (@event.Type == EventType.NodeChildrenChanged)
             {
                 lock (this.mutex)
@@ -90,11 +77,5 @@ namespace HW3_Zookeeper
 
             }
         }
-
-        public void Dispose()
-        {
-            //this.zk.Dispose();
-        }
-
     }
 }
