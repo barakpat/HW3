@@ -3,19 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using ZooKeeperNet;
-using Org.Apache.Zookeeper.Data;
 using System.Threading;
 
 namespace HW3_Zookeeper
 {
-    class DataChangedWatch : IWatcher, IDisposable
+    class NodeDeletedWatch : IWatcher
     {
         private ZooKeeper zk;
         private AutoResetEvent connectedSignal = new AutoResetEvent(false);
         private AutoResetEvent autoResetEvent;
         private String path;
 
-        public DataChangedWatch(String address, String path)
+        public NodeDeletedWatch(String address, String path)
         {
             this.zk = new ZooKeeper(address, new TimeSpan(1, 0, 0, 0), this);
             this.connectedSignal.WaitOne();
@@ -36,7 +35,7 @@ namespace HW3_Zookeeper
             {
                 this.connectedSignal.Set();
             }
-            if (@event.Type == EventType.NodeDataChanged)
+            if (@event.Type == EventType.NodeDeleted)
             {
                 this.autoResetEvent.Set();
             }
@@ -44,11 +43,6 @@ namespace HW3_Zookeeper
             {
                 this.zk.Exists(this.path, true);
             }
-        }
-
-        public void Dispose()
-        {
-            this.zk.Dispose();
         }
     }
 }
