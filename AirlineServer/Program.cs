@@ -44,7 +44,7 @@ namespace AirlineServer
 
                     // old - hw1
                     // airlineServer.unregisterFromServer();
-                    airlineCommunicationServer.distributer.leave();
+                    airlineCommunicationServer.distributer.Dispose();
                 }
             }
             catch (Exception e)
