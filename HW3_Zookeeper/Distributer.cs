@@ -34,7 +34,13 @@ namespace HW3_Zookeeper
 
         private ZooKeeper zk;
         private AutoResetEvent connectedSignal = new AutoResetEvent(false);
-        public Thread algorithmWorker;
+        private Thread algorithmWorker;
+        private bool inGracePeriod = false;
+        private readonly Object gracePeriodMutex = new Object();
+        private bool inBalanceMode = false;
+        private readonly Object balanceMutex = new Object();
+        private bool isTerminated = false;
+        private readonly Object terminationMutex = new Object();
 
         private String alliance;
         private String airline;
@@ -95,15 +101,30 @@ namespace HW3_Zookeeper
 
         public void Process(WatchedEvent @event)
         {
+            lock (this.terminationMutex)
+            {
+                if (this.isTerminated)
+                {
+                    return;
+                }
+            }
+            lock (this.gracePeriodMutex)
+            {
+                if (this.inGracePeriod)
+                {
+                    Console.WriteLine("*****************************");
+                    Console.WriteLine("** ERROR - IN GRACE PERIOD **");
+                    Console.WriteLine("*****************************");
+                }
+            }
+
             if (@event.State == KeeperState.SyncConnected && @event.Type == EventType.None)
             {
                 this.connectedSignal.Set();
             }
             if (@event.Type == EventType.NodeChildrenChanged)
             {
-                ThreadA threadA = new ThreadA(this, false);
-                this.algorithmWorker = new Thread(new ThreadStart(threadA.Run));
-                this.algorithmWorker.Start();
+                runAlgorithmWorkerThread(false);
             }
         }
 
@@ -124,9 +145,23 @@ namespace HW3_Zookeeper
 
             setServers(this.phase, new List<ServerData>() { serverNode });
 
-            algorithm(true);
+            runAlgorithmWorkerThread(true);
         }
 
+        private void runAlgorithmWorkerThread(bool isIJoined)
+        {
+            lock (this.balanceMutex)
+            {
+                if (this.inBalanceMode)
+                {
+                    this.algorithmWorker.Abort();
+                }
+            }
+            AlgorithmWorker algorithmWorkerThread = new AlgorithmWorker(this, isIJoined);
+            this.algorithmWorker = new Thread(new ThreadStart(algorithmWorkerThread.Run));
+            this.algorithmWorker.Start();        
+        }
+        
         public void leave()
         {
             this.zk.Delete(rootNodeName + "/" + this.alliance + "/" + this.ephemeralNodeName, -1);
@@ -144,15 +179,19 @@ namespace HW3_Zookeeper
 
         public void Dispose()
         {
+            lock (this.terminationMutex)
+            {
+                this.isTerminated = true;
+            }
             this.zk.Dispose();
         }
 
-        public class ThreadA
+        private class AlgorithmWorker
         {    
             Distributer parent;
             bool isIJoined;
 
-            public ThreadA(Distributer parent, bool isIJoined)
+            public AlgorithmWorker(Distributer parent, bool isIJoined)
             {
                 this.parent = parent;
                 this.isIJoined = isIJoined;
@@ -165,8 +204,16 @@ namespace HW3_Zookeeper
 
         public void algorithm(bool isIJoined)
         {
-            String allianceInServersNode = rootNodeName + "/" + this.alliance;
+            lock (this.gracePeriodMutex)
+            {
+                this.inGracePeriod = true;
+            }
+            lock (this.balanceMutex)
+            {
+                this.inBalanceMode = false;
+            }
 
+            String allianceInServersNode = rootNodeName + "/" + this.alliance;
             IEnumerable<String> serverNodes = this.zk.GetChildren(allianceInServersNode, true);
             List<String> serverNodesSortedList = serverNodes.ToList();
             serverNodesSortedList.Sort();
@@ -187,7 +234,22 @@ namespace HW3_Zookeeper
             updatePhasePhase(allianceInServersNode, serverNodesSortedList, nodeNameToAirline, isIJoined);
             deleteOldDataPhase(allianceInServersNode, serverNodesSortedList, airlineToNodeName, isIJoined);
             backupPhase(allianceInServersNode, serverNodesSortedList, airlineToNodeName);
+
+            lock (this.gracePeriodMutex)
+            {
+                this.inGracePeriod = false;
+            }
+            lock (this.balanceMutex)
+            {
+                this.inBalanceMode = true;
+            }
+            
             balancePhase(allianceInServersNode, serverNodesSortedList, airlineToNodeName);
+
+            lock (this.balanceMutex)
+            {
+                this.inBalanceMode = false;
+            }
         }
 
         private void setLeader(String serversPath, IEnumerable<String> serverNodes)
@@ -221,8 +283,6 @@ namespace HW3_Zookeeper
             String phaseBarrierPath = barriersNodeName + phaseBarrierNodeName + "/" + this.alliance;
             String phaseBarrierPathToAirline = phaseBarrierPath + "/" + this.ephemeralNodeName;
 
-//            DataChangedWatch dataChangedWatch = new DataChangedWatch(getAddress(), phaseBarrierPathToAirline);
-//            Barrier phaseBarrier = new Barrier(getAddress(), phaseBarrierPath, this.ephemeralNodeName, getBytes(this.phase.ToString()), serverNodes.Count());
             DataChangedWatch dataChangedWatch = new DataChangedWatch(this.zk, phaseBarrierPathToAirline);
             Barrier phaseBarrier = new Barrier(this.zk, phaseBarrierPath, this.ephemeralNodeName, getBytes(this.phase.ToString()), serverNodes.Count());
 
@@ -258,7 +318,6 @@ namespace HW3_Zookeeper
 
             dataChangedWatch.Wait();
             Console.WriteLine("entered");
-            dataChangedWatch.Dispose();
 
             Stat stat = new Stat();
             int newPhase = Convert.ToInt32(getString(this.zk.GetData(phaseBarrierPathToAirline, false, stat)));
@@ -275,7 +334,6 @@ namespace HW3_Zookeeper
             Console.WriteLine("wait to leave barrier");
             phaseBarrier.Leave();
             Console.WriteLine("left");
-            phaseBarrier.Dispose();
 
             if (this.isLeader)
             {
@@ -305,8 +363,6 @@ namespace HW3_Zookeeper
             String deleteBarrierPath = barriersNodeName + deleteBarrierNodeName + "/" + this.alliance;
             String deleteBarrierPathToAirline = deleteBarrierPath + "/" + this.ephemeralNodeName;
 
-//            DataChangedWatch dataChangedWatch = new DataChangedWatch(getAddress(), deleteBarrierPathToAirline);
-//            Barrier deleteBarrier = new Barrier(getAddress(), deleteBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
             DataChangedWatch dataChangedWatch = new DataChangedWatch(this.zk, deleteBarrierPathToAirline);
             Barrier deleteBarrier = new Barrier(this.zk, deleteBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
 
@@ -327,7 +383,6 @@ namespace HW3_Zookeeper
             
             dataChangedWatch.Wait();
             Console.WriteLine("entered");
-            dataChangedWatch.Dispose();
 
             if (isIJoined)
             {
@@ -380,7 +435,6 @@ namespace HW3_Zookeeper
             Console.WriteLine("wait to leave barrier");
             deleteBarrier.Leave();
             Console.WriteLine("left");
-            deleteBarrier.Dispose();
 
             if (action.Equals(NODE_JOINED) && this.isLeader)
             {
@@ -400,8 +454,6 @@ namespace HW3_Zookeeper
             String backupBarrierPath = barriersNodeName + backupBarrierNodeName + "/" + this.alliance;
             String backupBarrierPathToAirline = backupBarrierPath + "/" + this.ephemeralNodeName;
 
-//            DataChangedWatch dataChangedWatch = new DataChangedWatch(getAddress(), backupBarrierPathToAirline);
-//            Barrier backupBarrier = new Barrier(getAddress(), backupBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
             DataChangedWatch dataChangedWatch = new DataChangedWatch(this.zk, backupBarrierPathToAirline);
             Barrier backupBarrier = new Barrier(this.zk, backupBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
 
@@ -422,7 +474,6 @@ namespace HW3_Zookeeper
 
             dataChangedWatch.Wait();
             Console.WriteLine("entered");
-            dataChangedWatch.Dispose();
 
             List<ServerData> serversData = new List<ServerData>();
             foreach (String airline in serverNodes)
@@ -440,7 +491,6 @@ namespace HW3_Zookeeper
             Console.WriteLine("wait to leave barrier");
             backupBarrier.Leave();
             Console.WriteLine("left");
-            backupBarrier.Dispose();
 
             if (this.isLeader)
             {
@@ -460,8 +510,6 @@ namespace HW3_Zookeeper
             String balanceBarrierPath = barriersNodeName + balanceBarrierNodeName + "/" + this.alliance;
             String balanceBarrierPathToAirline = balanceBarrierPath + "/" + this.ephemeralNodeName;
 
-//            DataChangedWatch dataChangedWatch = new DataChangedWatch(getAddress(), balanceBarrierPathToAirline);
-//            Barrier balanceBarrier = new Barrier(getAddress(), balanceBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
             DataChangedWatch dataChangedWatch = new DataChangedWatch(this.zk, balanceBarrierPathToAirline);
             Barrier balanceBarrier = new Barrier(this.zk, balanceBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
 
@@ -482,7 +530,6 @@ namespace HW3_Zookeeper
 
             dataChangedWatch.Wait();
             Console.WriteLine("entered");
-            dataChangedWatch.Dispose();
 
             List<ServerData> serversData = new List<ServerData>();
             foreach (String airline in serverNodes)
@@ -506,7 +553,6 @@ namespace HW3_Zookeeper
             Console.WriteLine("wait to leave barrier");
             balanceBarrier.Leave();
             Console.WriteLine("left");
-            balanceBarrier.Dispose();
 
             updateDataToNewPhase(newPhase);
             
