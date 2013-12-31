@@ -14,21 +14,27 @@ namespace HW3_Zookeeper
         private String name;
         private byte[] data;
         private int size;
+        private bool isLeader;
         
         private readonly Object mutex = new Object();
 
-        public Barrier(ZooKeeper zk, String root, String name, byte[] data, int size)
+        public Barrier(ZooKeeper zk, String root, String name, byte[] data, int size, bool isLeader)
         {
             this.zk = zk;
             this.root = root;
             this.name = name;
             this.data = data;
             this.size = size;
+            this.isLeader = isLeader;
        }
 
         public bool Enter()
         {
             zk.Create(this.root + "/" + this.name, this.data, Ids.OPEN_ACL_UNSAFE, CreateMode.Ephemeral);
+            if (!this.isLeader)
+            {
+                return true;
+            }
             while (true)
             {
                 lock (this.mutex)
