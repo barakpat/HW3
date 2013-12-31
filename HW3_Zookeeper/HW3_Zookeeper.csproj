@@ -44,7 +44,6 @@
     <Compile Include="Distributer.cs" />
     <Compile Include="DataChangedWatch.cs" />
     <Compile Include="IDistributer.cs" />
-    <Compile Include="NodeDeletedWatch.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="ServerData.cs" />
   </ItemGroup>
