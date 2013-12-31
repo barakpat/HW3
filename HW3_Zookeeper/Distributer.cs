@@ -112,9 +112,13 @@ namespace HW3_Zookeeper
             {
                 if (this.inGracePeriod)
                 {
+                    Console.WriteLine("\n*****************************");
+                    Console.WriteLine("*****************************");
                     Console.WriteLine("*****************************");
                     Console.WriteLine("** ERROR - IN GRACE PERIOD **");
                     Console.WriteLine("*****************************");
+                    Console.WriteLine("*****************************");
+                    Console.WriteLine("*****************************\n");
                 }
             }
 
@@ -284,7 +288,7 @@ namespace HW3_Zookeeper
             String phaseBarrierPathToAirline = phaseBarrierPath + "/" + this.ephemeralNodeName;
 
             DataChangedWatch dataChangedWatch = new DataChangedWatch(this.zk, phaseBarrierPathToAirline);
-            Barrier phaseBarrier = new Barrier(this.zk, phaseBarrierPath, this.ephemeralNodeName, getBytes(this.phase.ToString()), serverNodes.Count());
+            Barrier phaseBarrier = new Barrier(this.zk, phaseBarrierPath, this.ephemeralNodeName, getBytes(this.phase.ToString()), serverNodes.Count(), this.isLeader);
 
             Console.WriteLine("sent phase - " + this.phase);
 
@@ -364,7 +368,7 @@ namespace HW3_Zookeeper
             String deleteBarrierPathToAirline = deleteBarrierPath + "/" + this.ephemeralNodeName;
 
             DataChangedWatch dataChangedWatch = new DataChangedWatch(this.zk, deleteBarrierPathToAirline);
-            Barrier deleteBarrier = new Barrier(this.zk, deleteBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
+            Barrier deleteBarrier = new Barrier(this.zk, deleteBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count(), this.isLeader);
 
             Console.WriteLine("wait to enter barrier");
             deleteBarrier.Enter();
@@ -455,7 +459,7 @@ namespace HW3_Zookeeper
             String backupBarrierPathToAirline = backupBarrierPath + "/" + this.ephemeralNodeName;
 
             DataChangedWatch dataChangedWatch = new DataChangedWatch(this.zk, backupBarrierPathToAirline);
-            Barrier backupBarrier = new Barrier(this.zk, backupBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
+            Barrier backupBarrier = new Barrier(this.zk, backupBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count(), this.isLeader);
 
             Console.WriteLine("wait to enter barrier");
             backupBarrier.Enter();
@@ -511,7 +515,7 @@ namespace HW3_Zookeeper
             String balanceBarrierPathToAirline = balanceBarrierPath + "/" + this.ephemeralNodeName;
 
             DataChangedWatch dataChangedWatch = new DataChangedWatch(this.zk, balanceBarrierPathToAirline);
-            Barrier balanceBarrier = new Barrier(this.zk, balanceBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
+            Barrier balanceBarrier = new Barrier(this.zk, balanceBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count(), this.isLeader);
 
             Console.WriteLine("wait to enter barrier");
             balanceBarrier.Enter();
