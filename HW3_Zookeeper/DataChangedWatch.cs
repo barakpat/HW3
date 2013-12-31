@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace HW3_Zookeeper
 {
-    class DataChangedWatch : IWatcher
+    class DataChangedWatch : IWatcher, IDisposable
     {
         private ZooKeeper zk;
         private AutoResetEvent connectedSignal = new AutoResetEvent(false);
@@ -45,6 +45,10 @@ namespace HW3_Zookeeper
                 this.zk.Exists(this.path, true);
             }
         }
-    
+
+        public void Dispose()
+        {
+            this.zk.Dispose();
+        }
     }
 }

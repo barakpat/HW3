@@ -7,7 +7,7 @@ using System.Threading;
 
 namespace HW3_Zookeeper
 {
-    class Barrier : IWatcher
+    class Barrier : IWatcher, IDisposable
     {
         private ZooKeeper zk;
         private AutoResetEvent connectedSignal = new AutoResetEvent(false);
@@ -83,5 +83,11 @@ namespace HW3_Zookeeper
 
             }
         }
+
+        public void Dispose()
+        {
+            this.zk.Dispose();
+        }
+
     }
 }
