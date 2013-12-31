@@ -34,6 +34,7 @@ namespace HW3_Zookeeper
 
         private ZooKeeper zk;
         private AutoResetEvent connectedSignal = new AutoResetEvent(false);
+        public Thread algorithmWorker;
 
         private String alliance;
         private String airline;
@@ -99,8 +100,10 @@ namespace HW3_Zookeeper
                 this.connectedSignal.Set();
             }
             if (@event.Type == EventType.NodeChildrenChanged)
-            {            
-                algorithm(false);
+            {
+                ThreadA threadA = new ThreadA(this, false);
+                this.algorithmWorker = new Thread(new ThreadStart(threadA.Run));
+                this.algorithmWorker.Start();
             }
         }
 
@@ -144,7 +147,23 @@ namespace HW3_Zookeeper
             this.zk.Dispose();
         }
 
-        private void algorithm(bool isIJoined)
+        public class ThreadA
+        {    
+            Distributer parent;
+            bool isIJoined;
+
+            public ThreadA(Distributer parent, bool isIJoined)
+            {
+                this.parent = parent;
+                this.isIJoined = isIJoined;
+            }
+            
+            public void Run(){
+                this.parent.algorithm(this.isIJoined);
+            }
+        }
+
+        public void algorithm(bool isIJoined)
         {
             String allianceInServersNode = rootNodeName + "/" + this.alliance;
 
@@ -201,9 +220,11 @@ namespace HW3_Zookeeper
 
             String phaseBarrierPath = barriersNodeName + phaseBarrierNodeName + "/" + this.alliance;
             String phaseBarrierPathToAirline = phaseBarrierPath + "/" + this.ephemeralNodeName;
-            
-            DataChangedWatch dataChangedWatch = new DataChangedWatch(getAddress(), phaseBarrierPathToAirline);
-            Barrier phaseBarrier = new Barrier(getAddress(), phaseBarrierPath, this.ephemeralNodeName, getBytes(this.phase.ToString()), serverNodes.Count());
+
+//            DataChangedWatch dataChangedWatch = new DataChangedWatch(getAddress(), phaseBarrierPathToAirline);
+//            Barrier phaseBarrier = new Barrier(getAddress(), phaseBarrierPath, this.ephemeralNodeName, getBytes(this.phase.ToString()), serverNodes.Count());
+            DataChangedWatch dataChangedWatch = new DataChangedWatch(this.zk, phaseBarrierPathToAirline);
+            Barrier phaseBarrier = new Barrier(this.zk, phaseBarrierPath, this.ephemeralNodeName, getBytes(this.phase.ToString()), serverNodes.Count());
 
             Console.WriteLine("sent phase - " + this.phase);
 
@@ -284,8 +305,10 @@ namespace HW3_Zookeeper
             String deleteBarrierPath = barriersNodeName + deleteBarrierNodeName + "/" + this.alliance;
             String deleteBarrierPathToAirline = deleteBarrierPath + "/" + this.ephemeralNodeName;
 
-            DataChangedWatch dataChangedWatch = new DataChangedWatch(getAddress(), deleteBarrierPathToAirline);
-            Barrier deleteBarrier = new Barrier(getAddress(), deleteBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
+//            DataChangedWatch dataChangedWatch = new DataChangedWatch(getAddress(), deleteBarrierPathToAirline);
+//            Barrier deleteBarrier = new Barrier(getAddress(), deleteBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
+            DataChangedWatch dataChangedWatch = new DataChangedWatch(this.zk, deleteBarrierPathToAirline);
+            Barrier deleteBarrier = new Barrier(this.zk, deleteBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
 
             Console.WriteLine("wait to enter barrier");
             deleteBarrier.Enter();
@@ -376,9 +399,11 @@ namespace HW3_Zookeeper
 
             String backupBarrierPath = barriersNodeName + backupBarrierNodeName + "/" + this.alliance;
             String backupBarrierPathToAirline = backupBarrierPath + "/" + this.ephemeralNodeName;
-            
-            DataChangedWatch dataChangedWatch = new DataChangedWatch(getAddress(), backupBarrierPathToAirline);
-            Barrier backupBarrier = new Barrier(getAddress(), backupBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
+
+//            DataChangedWatch dataChangedWatch = new DataChangedWatch(getAddress(), backupBarrierPathToAirline);
+//            Barrier backupBarrier = new Barrier(getAddress(), backupBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
+            DataChangedWatch dataChangedWatch = new DataChangedWatch(this.zk, backupBarrierPathToAirline);
+            Barrier backupBarrier = new Barrier(this.zk, backupBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
 
             Console.WriteLine("wait to enter barrier");
             backupBarrier.Enter();
@@ -435,8 +460,10 @@ namespace HW3_Zookeeper
             String balanceBarrierPath = barriersNodeName + balanceBarrierNodeName + "/" + this.alliance;
             String balanceBarrierPathToAirline = balanceBarrierPath + "/" + this.ephemeralNodeName;
 
-            DataChangedWatch dataChangedWatch = new DataChangedWatch(getAddress(), balanceBarrierPathToAirline);
-            Barrier balanceBarrier = new Barrier(getAddress(), balanceBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
+//            DataChangedWatch dataChangedWatch = new DataChangedWatch(getAddress(), balanceBarrierPathToAirline);
+//            Barrier balanceBarrier = new Barrier(getAddress(), balanceBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
+            DataChangedWatch dataChangedWatch = new DataChangedWatch(this.zk, balanceBarrierPathToAirline);
+            Barrier balanceBarrier = new Barrier(this.zk, balanceBarrierPath, this.ephemeralNodeName, new byte[0], serverNodes.Count());
 
             Console.WriteLine("wait to enter barrier");
             balanceBarrier.Enter();

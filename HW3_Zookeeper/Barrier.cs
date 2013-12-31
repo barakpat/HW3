@@ -18,10 +18,12 @@ namespace HW3_Zookeeper
         
         private readonly Object mutex = new Object();
 
-        public Barrier(String address, String root, String name, byte[] data, int size)
+//        public Barrier(String address, String root, String name, byte[] data, int size)
+        public Barrier(ZooKeeper zk, String root, String name, byte[] data, int size)
         {
-            this.zk = new ZooKeeper(address, new TimeSpan(1, 0, 0, 0), this);
-            this.connectedSignal.WaitOne();
+            //this.zk = new ZooKeeper(address, new TimeSpan(1, 0, 0, 0), this);
+            this.zk = zk;
+//            this.connectedSignal.WaitOne();
             this.root = root;
             this.name = name;
             this.data = data;
@@ -35,7 +37,8 @@ namespace HW3_Zookeeper
             {
                 lock (this.mutex)
                 {
-                    IEnumerable<String> list = this.zk.GetChildren(this.root, true);
+//                    IEnumerable<String> list = this.zk.GetChildren(this.root, true);
+                    IEnumerable<String> list = this.zk.GetChildren(this.root, this);
                     if (list.Count() < this.size)
                     {
                         System.Threading.Monitor.Wait(this.mutex);
@@ -55,7 +58,8 @@ namespace HW3_Zookeeper
             {
                 lock (this.mutex)
                 {
-                    IEnumerable<String> list = this.zk.GetChildren(this.root, true);
+//                    IEnumerable<String> list = this.zk.GetChildren(this.root, true);
+                    IEnumerable<String> list = this.zk.GetChildren(this.root, this);
                     if (list.Count() > 0)
                     {
                         System.Threading.Monitor.Wait(this.mutex);
@@ -70,6 +74,9 @@ namespace HW3_Zookeeper
 
         public void Process(WatchedEvent @event)
         {
+            Console.WriteLine(@event.State);
+            Console.WriteLine(@event.Type);
+
             if (@event.State == KeeperState.SyncConnected && @event.Type == EventType.None)
             {
                 this.connectedSignal.Set();
@@ -86,7 +93,7 @@ namespace HW3_Zookeeper
 
         public void Dispose()
         {
-            this.zk.Dispose();
+            //this.zk.Dispose();
         }
 
     }
