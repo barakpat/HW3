@@ -149,6 +149,9 @@ namespace AirlineServer
             foreach (String serverName in myServerChannelNames)
             {
                 if (!allienceServers.Exists(server => server.airline == serverName)){
+                    //IAirlineCommunication c;
+                    //this.serversChannels.TryGetValue(serverName, out c);
+                    //c.
                     this.serversChannels.Remove(serverName);
                 }
             }
