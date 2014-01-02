@@ -30,7 +30,7 @@ namespace HW3_Zookeeper
 
         public bool Enter()
         {
-            zk.Create(this.root + "/" + this.name, this.data, Ids.OPEN_ACL_UNSAFE, CreateMode.Ephemeral);
+            this.zk.Create(this.root + "/" + this.name, this.data, Ids.OPEN_ACL_UNSAFE, CreateMode.Ephemeral);
             if (!this.isLeader)
             {
                 return true;
@@ -54,7 +54,7 @@ namespace HW3_Zookeeper
 
         public bool Leave()
         {
-            zk.Delete(this.root + "/" + this.name, -1);
+            this.zk.Delete(this.root + "/" + this.name, -1);
             while (true)
             {
                 lock (this.mutex)

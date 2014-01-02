@@ -6,6 +6,9 @@ using ZooKeeperNet;
 using Org.Apache.Zookeeper.Data;
 using System.Threading;
 
+//TODO: check when event occures when in balance mode
+//TODO: clean the nodes in barriers when exiting balance mode
+
 namespace HW3_Zookeeper
 {
 
@@ -159,6 +162,11 @@ namespace HW3_Zookeeper
                 if (this.inBalanceMode)
                 {
                     this.algorithmWorker.Abort();
+                    try
+                    {
+                        this.zk.Delete(barriersNodeName + balanceBarrierNodeName + "/" + this.alliance + "/" + this.ephemeralNodeName, -1);
+                    }
+                    catch (Exception){}
                 }
             }
             AlgorithmWorker algorithmWorkerThread = new AlgorithmWorker(this, isIJoined);
@@ -236,8 +244,8 @@ namespace HW3_Zookeeper
 
             setLeader(allianceInServersNode, serverNodesSortedList);
             updatePhasePhase(allianceInServersNode, serverNodesSortedList, nodeNameToAirline, isIJoined);
-            deleteOldDataPhase(allianceInServersNode, serverNodesSortedList, airlineToNodeName, isIJoined);
-            backupPhase(allianceInServersNode, serverNodesSortedList, airlineToNodeName);
+            deleteOldDataPhase(allianceInServersNode, serverNodesSortedList, nodeNameToAirline, airlineToNodeName, isIJoined);
+            backupPhase(allianceInServersNode, serverNodesSortedList, nodeNameToAirline, airlineToNodeName);
 
             lock (this.gracePeriodMutex)
             {
@@ -247,8 +255,8 @@ namespace HW3_Zookeeper
             {
                 this.inBalanceMode = true;
             }
-            
-            balancePhase(allianceInServersNode, serverNodesSortedList, airlineToNodeName);
+
+            balancePhase(allianceInServersNode, serverNodesSortedList, nodeNameToAirline, airlineToNodeName);
 
             lock (this.balanceMutex)
             {
@@ -352,7 +360,7 @@ namespace HW3_Zookeeper
                         if (serverData.airline.Equals(sd.airline))
                         {
                             this.zk.SetData(airlineInServerNode, getBytes(ServerData.serialize(sd)), -1);
-                            Console.WriteLine("update node - " + serverNode + " - airline - " + nodeNameToAirline[serverNode]);
+                            Console.WriteLine("update " + nodeNameToAirline[serverNode]);
                             break;
                         }
                     }
@@ -360,7 +368,7 @@ namespace HW3_Zookeeper
             }
         }
 
-        private void deleteOldDataPhase(String allianceInServersNode, IEnumerable<String> serverNodes, Dictionary<String, String> airlineToNodeName, bool isIJoined)
+        private void deleteOldDataPhase(String allianceInServersNode, IEnumerable<String> serverNodes, Dictionary<String, String> nodeNameToAirline, Dictionary<String, String> airlineToNodeName, bool isIJoined)
         {
             Console.WriteLine("\n******************************\nStart Delete Old Data\n");
 
@@ -382,6 +390,7 @@ namespace HW3_Zookeeper
                     String airlineInBarrierNode = deleteBarrierPath + "/" + airline;
                     Stat s = new Stat();
                     this.zk.SetData(airlineInBarrierNode, getBytes(""), -1);
+                    Console.WriteLine("touch " + nodeNameToAirline[airline]);
                 }
             }
             
@@ -446,12 +455,12 @@ namespace HW3_Zookeeper
                 foreach (ServerData serverData in serversDataAfterDeletion)
                 {
                     this.zk.SetData(allianceInServersNode + "/" + airlineToNodeName[serverData.airline], getBytes(ServerData.serialize(serverData)), -1);
-                    Console.WriteLine("update node - " + airlineToNodeName[serverData.airline] + " - airline - " + serverData.airline);
+                    Console.WriteLine("update " + serverData.airline);
                 }
             }
         }
 
-        private void backupPhase(String allianceInServersNode, IEnumerable<String> serverNodes, Dictionary<String, String> airlineToNodeName)
+        private void backupPhase(String allianceInServersNode, IEnumerable<String> serverNodes, Dictionary<String, String> nodeNameToAirline, Dictionary<String, String> airlineToNodeName)
         {
             Console.WriteLine("\n******************************\nStart Backup\n");
 
@@ -473,6 +482,7 @@ namespace HW3_Zookeeper
                     String airlineInBarrierNode = backupBarrierPath + "/" + airline;
                     Stat s = new Stat();
                     this.zk.SetData(airlineInBarrierNode, getBytes(""), -1);
+                    Console.WriteLine("touch " + nodeNameToAirline[airline]);
                 }
             }
 
@@ -502,15 +512,15 @@ namespace HW3_Zookeeper
                 foreach (ServerData serverData in serversDataAfterBackup)
                 {
                     this.zk.SetData(allianceInServersNode + "/" + airlineToNodeName[serverData.airline], getBytes(ServerData.serialize(serverData)), -1);
-                    Console.WriteLine("update node - " + airlineToNodeName[serverData.airline] + " - airline - " + serverData.airline);
+                    Console.WriteLine("update " + serverData.airline);
                 }
             }
         }
 
-        private void balancePhase(String allianceInServersNode, IEnumerable<String> serverNodes, Dictionary<String, String> airlineToNodeName)
+        private void balancePhase(String allianceInServersNode, IEnumerable<String> serverNodes, Dictionary<String, String> nodeNameToAirline, Dictionary<String, String> airlineToNodeName)
         {
             Console.WriteLine("\n******************************\nStart Balance\n");
-
+            
             String balanceBarrierPath = barriersNodeName + balanceBarrierNodeName + "/" + this.alliance;
             String balanceBarrierPathToAirline = balanceBarrierPath + "/" + this.ephemeralNodeName;
 
@@ -529,11 +539,14 @@ namespace HW3_Zookeeper
                     String airlineInBarrierNode = balanceBarrierPath + "/" + airline;
                     Stat s = new Stat();
                     this.zk.SetData(airlineInBarrierNode, getBytes(""), -1);
+                    Console.WriteLine("touch " + nodeNameToAirline[airline]);
                 }
             }
 
             dataChangedWatch.Wait();
             Console.WriteLine("entered");
+
+//            System.Threading.Thread.Sleep(2000);
 
             List<ServerData> serversData = new List<ServerData>();
             foreach (String airline in serverNodes)
@@ -566,7 +579,7 @@ namespace HW3_Zookeeper
                 foreach (ServerData serverData in serversDataAfterBalance)
                 {
                     this.zk.SetData(allianceInServersNode + "/" + airlineToNodeName[serverData.airline], getBytes(ServerData.serialize(serverData)), -1);
-                    Console.WriteLine("update node - " + airlineToNodeName[serverData.airline] + " - airline - " + serverData.airline);
+                    Console.WriteLine("update " + serverData.airline);
                 }
             }
         }
@@ -598,12 +611,12 @@ namespace HW3_Zookeeper
 
         private void updateDataToNewPhase(int newPhase)
         {
-            Console.WriteLine("calling delegate");
-            this.updateDataToPhaseDelegate(newPhase);
-
             this.phase = newPhase;
             removeServers(newPhase);
             Console.WriteLine("moved to new phase");
+
+            Console.WriteLine("calling delegate");
+            this.updateDataToPhaseDelegate(newPhase);
         }
         
         private static String getAddress()
