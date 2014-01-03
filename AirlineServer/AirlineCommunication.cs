@@ -25,7 +25,8 @@ namespace AirlineServer
         // AirlineFlightsData airlineFlightsData = new AirlineFlightsData();
         //AirlinesFlightsData airlinesFlightsData = new AirlinesFlightsData();
         
-        // Sever data with versioning
+        // Sever data with versioning 
+        //TODO this dictionary must be concurent!!!!!!!!!!!!!!
         Dictionary<int, AirlinesFlightsData> serverData = new Dictionary<int, AirlinesFlightsData>();
         
        // Dictionary<string, List<Flight> > airlineFlights = new Dictionary<string, List<Flight> >();
@@ -61,6 +62,7 @@ namespace AirlineServer
                 {
                     if (key != p) this.serverData.Remove(key);
                 }
+                this.printData(null, "******** Update Phase ********");
                 return;
             }
             else
@@ -74,8 +76,13 @@ namespace AirlineServer
         // replication algorithm delegate method
         public List<ServerData> deleteOldData(List<ServerData> servers, String airline)
         {
-            AirlinesFlightsData tmpAirlinesFlightsData = getCurrentPhaseDate();
-            tmpAirlinesFlightsData.Remove(airline);
+            this.printData(servers, "******** DELETE OLD DATA  - BEGIN ********");
+            
+            
+
+
+            AirlinesFlightsData airlinesFlightsData = getCurrentPhaseDate();
+            airlinesFlightsData.Remove(airline);
 
             foreach (ServerData server in servers) 
             {
@@ -83,7 +90,10 @@ namespace AirlineServer
                     server.airlines = server.airlines.Where(x => x.name != airline).ToList();
                 }
             }
-            
+
+            this.printData(servers, "******** DELETE OLD DATA  - END ********");
+           
+
             return servers;
         }
 
@@ -108,11 +118,19 @@ namespace AirlineServer
         // replication algorithm delegate method
         public List<ServerData> backUp(List<ServerData> allienceServers)
         {
+
+            this.printData(allienceServers, " ************       Backup - begin  ******");
+            
+            
             //
             this.updateChannelsList(allienceServers);
             
+
             AirlinesFlightsData tmpAirlinesFlightsData = getCurrentPhaseDate();
-            List<String> myAirline = new List<string>(tmpAirlinesFlightsData.Keys);
+            ServerData s = allienceServers.Find(server => server.airline == this.serverName);
+            //s.airlines.Select(airline => airline.name);
+            //List<String> myAirline = new List<string>(tmpAirlinesFlightsData.Keys);
+            List<String> myAirline = new List<string>(s.airlines.Select(airline => airline.name));
             foreach (String airline in myAirline)
             {
                 if (!isBackedUp(airline, allienceServers))
@@ -132,7 +150,44 @@ namespace AirlineServer
                 }
             }
             List<ServerData> newAllienceServers = calcNewAllienceServersState(allienceServers);
+
+            this.printData(allienceServers, "********Backup - END ********");
+            
             return newAllienceServers;
+        }
+
+        private void printData(List<ServerData> allienceServers, String comment)
+        {
+            //Console.WriteLine();
+            //Console.WriteLine();            
+            //Console.WriteLine();
+            //Console.WriteLine(comment);
+            //Console.WriteLine(comment);
+            //Console.WriteLine(comment);
+            //Console.WriteLine(" ****  Boris DATA ******");
+            //if (allienceServers != null)
+            //{
+            //    foreach (ServerData s in allienceServers)
+            //    {
+            //        Console.Write(s.airline + " - ");
+            //        ;
+            //        foreach (AirlineData a in s.airlines)
+            //        {
+            //            Console.Write(a.name + ", ");
+            //        }
+            //        Console.WriteLine();
+            //    }
+            //}
+
+            //Console.WriteLine(" ****  BARAK DATA ******");
+            //Console.Write(this.serverName + " - ");
+            //AirlinesFlightsData tmpAirlinesFlightsData = getCurrentPhaseDate();
+            //List<String> myAirline = new List<string>(tmpAirlinesFlightsData.Keys);
+            //foreach (String airline in myAirline)
+            //{
+            //    Console.Write(airline + ", ");
+            //}
+            //Console.WriteLine();
         }
 
         private void updateChannelsList(List<ServerData> allienceServers)
@@ -197,9 +252,8 @@ namespace AirlineServer
         {
             ServerData targetServer = findTargetServer(airlineFlightsData.airlineName, allienceServers);
             AirlineFlightsData copyAirlineFlightsData = new AirlineFlightsData(airlineFlightsData, true); // creating the copy of the backup
-                 
-            IAirlineCommunication channel;
-            this.serversChannels.TryGetValue(targetServer.airline, out channel);
+
+            IAirlineCommunication channel = getChannelByServerName(targetServer.airline);
             channel.moveAirline(copyAirlineFlightsData, this.currentVersion);
 
         }
@@ -269,6 +323,10 @@ namespace AirlineServer
 
         public List<ServerData> balance(List<ServerData> allienceServers, List<String> airlines,  int phase)
         {
+
+            this.printData(allienceServers, "******** BALACE OLD DATA  - BEGIN ********");
+            
+            
             // if there is only 1 server no need for balance
             if (allienceServers.Count == 1)
             {
@@ -285,21 +343,31 @@ namespace AirlineServer
             foreach (AirlineFlightsData airline in myAirline){
                 String tergetServer = this.calcTargetServerAfterBalance(airline, nextPhaseImage);
 
-                IAirlineCommunication channel;
-                if (tergetServer == this.serverName)
-                {
-                    channel = this;
-                }
-                else
-                {
-                    this.serversChannels.TryGetValue(tergetServer, out channel);
-
-                }
+                IAirlineCommunication channel = getChannelByServerName(tergetServer);
                 //send the data to the target server to the next phase
                 channel.moveAirline(airline, phase);   
 
             }
-            return allienceServers;
+
+            this.printData(allienceServers, "******** BALACE OLD DATA  - END ********");
+            
+
+            return nextPhaseImage;
+        }
+
+        private IAirlineCommunication getChannelByServerName(String serverName)
+        {
+            IAirlineCommunication channel;
+            if (serverName == this.serverName)
+            {
+                channel = this;
+            }
+            else
+            {
+                this.serversChannels.TryGetValue(serverName, out channel);
+
+            }
+            return channel;
         }
 
         private string calcTargetServerAfterBalance(AirlineFlightsData airline, List<ServerData> nextPhaseImage)
@@ -385,16 +453,20 @@ namespace AirlineServer
             foreach (ServerData server in this.distributer.getServers())
             {
                 AirlinesFlights airlinesFlights = new AirlinesFlights();
-                if (this.serverName == server.airline)// local server
-                {
-                    airlinesFlights =  this.Search(src, dst, date, airline);
-                }
-                else
-                {
-                    IAirlineCommunication channel;
-                    this.serversChannels.TryGetValue(server.airline, out channel);
-                    airlinesFlights = channel.Search(src, dst, date, airline);   
-                }
+
+                IAirlineCommunication channel = getChannelByServerName(server.airline);
+                airlinesFlights = channel.Search(src, dst, date, airline);
+
+                //if (this.serverName == server.airline)// local server
+                //{
+                //    airlinesFlights = this.Search(src, dst, date, airline);
+                //}
+                //else
+                //{
+                //    IAirlineCommunication channel;
+                //    this.serversChannels.TryGetValue(server.airline, out channel);
+                //    airlinesFlights = channel.Search(src, dst, date, airline);
+                //}
                 
                 foreach (var airlineFlights in airlinesFlights.Values){
                     srcDstFlights.AddRange(airlineFlights.srcDstflights);
