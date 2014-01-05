@@ -6,9 +6,6 @@ using ZooKeeperNet;
 using Org.Apache.Zookeeper.Data;
 using System.Threading;
 
-//TODO: check when event occures when in balance mode
-//TODO: clean the nodes in barriers when exiting balance mode
-
 namespace HW3_Zookeeper
 {
 
@@ -122,6 +119,9 @@ namespace HW3_Zookeeper
                     Console.WriteLine("*****************************");
                     Console.WriteLine("*****************************");
                     Console.WriteLine("*****************************\n");
+                    Console.WriteLine("\nA change while the grace period causing the system to be in unstable state.");
+                    Console.WriteLine("\nPlease restrat the system");
+                    return;
                 }
             }
 
