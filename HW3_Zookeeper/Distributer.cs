@@ -6,9 +6,6 @@ using ZooKeeperNet;
 using Org.Apache.Zookeeper.Data;
 using System.Threading;
 
-//TODO: check when event occures when in balance mode
-//TODO: clean the nodes in barriers when exiting balance mode
-
 namespace HW3_Zookeeper
 {
 
@@ -122,6 +119,9 @@ namespace HW3_Zookeeper
                     Console.WriteLine("*****************************");
                     Console.WriteLine("*****************************");
                     Console.WriteLine("*****************************\n");
+                    Console.WriteLine("\nA change while the grace period causing the system to be in unstable state.");
+                    Console.WriteLine("\nPlease restrat the system");
+                    return;
                 }
             }
 
@@ -209,8 +209,15 @@ namespace HW3_Zookeeper
                 this.isIJoined = isIJoined;
             }
             
-            public void Run(){
-                this.parent.algorithm(this.isIJoined);
+            public void Run() {
+                try
+                {
+                    this.parent.algorithm(this.isIJoined);
+                }
+                catch
+                {
+                    Console.WriteLine("Internal Error");
+                }
             }
         }
 
@@ -276,7 +283,6 @@ namespace HW3_Zookeeper
                 Console.WriteLine("leader");
                 if (!this.isLeader)
                 {
-                    Console.WriteLine("calling delegate");
                     this.leaderDelegate();
                 }
                 this.isLeader = true;
@@ -440,7 +446,6 @@ namespace HW3_Zookeeper
             List<ServerData> serversDataAfterDeletion = null;
             if (action.Equals(NODE_JOINED))
             {
-                Console.WriteLine("calling delegate");
                 serversDataAfterDeletion = this.deleteOldDataDelegate(serversData, airlineChanged);
                 setServers(this.phase, serversDataAfterDeletion);
             }
@@ -498,7 +503,6 @@ namespace HW3_Zookeeper
                 serversData.Add(sd);
             }
 
-            Console.WriteLine("calling delegate");
             List<ServerData> serversDataAfterBackup = this.backupDelegate(serversData);
             setServers(this.phase, serversDataAfterBackup);
 
@@ -563,7 +567,6 @@ namespace HW3_Zookeeper
 
             int newPhase = this.phase + 1;
             
-            Console.WriteLine("calling delegate");
             List<ServerData> serversDataAfterBalance = this.balanceDelegate(serversData, allianceData.airlines, newPhase);
             setServers(newPhase, serversDataAfterBalance);
 
@@ -615,7 +618,6 @@ namespace HW3_Zookeeper
             removeServers(newPhase);
             Console.WriteLine("moved to new phase");
 
-            Console.WriteLine("calling delegate");
             this.updateDataToPhaseDelegate(newPhase);
         }
         
