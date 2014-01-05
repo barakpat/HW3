@@ -34,6 +34,7 @@ namespace AirlineServer
         String serverName;
         
         public Distributer distributer { get; set; }
+        public Cache cache{ get; set; }
 
         public AirlineCommunication(string[] args) 
         {
@@ -118,7 +119,9 @@ namespace AirlineServer
         // replication algorithm delegate method
         public List<ServerData> backUp(List<ServerData> allienceServers)
         {
-
+            //delete cache
+            this.cache.clearCache();
+            
             this.printData(allienceServers, " ************       Backup - begin  ******");
             
             

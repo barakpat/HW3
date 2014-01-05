@@ -4,6 +4,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.ServiceModel;
+using System.ServiceModel.Description;
+using System.ServiceModel.Dispatcher;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -30,7 +32,16 @@ namespace AirlineServer
                     allienceBehaviour.InstanceContextMode = InstanceContextMode.Single;
                     // define the service endpoints
                     allienceHost.Open();
-                    
+                    airlineCommunicationServer.cache = new Cache();
+                    CacheBehavior cacheBehavior = new CacheBehavior(airlineCommunicationServer.cache);
+                    ServiceEndpoint endPoint = host.AddServiceEndpoint(typeof(IAirlineServerSoap), new BasicHttpBinding(), "AirlineServerSoap");
+                    foreach (OperationDescription od in endPoint.Contract.Operations)
+                    {
+                        //od.Behaviors.Add(logBehavior);
+                        od.Behaviors.Add(cacheBehavior);
+                    }
+
+
                     host.Open();
 
                     // TODO -join cluster
