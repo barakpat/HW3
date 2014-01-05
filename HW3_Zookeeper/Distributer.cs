@@ -626,7 +626,7 @@ namespace HW3_Zookeeper
             System.IO.StreamReader file = new System.IO.StreamReader(zookeeperConfigFilePath);
             String address = file.ReadLine();
             file.Close();
-            return address;
+            return address.Split(',')[0];
         }
 
         private static byte[] getBytes(string str)
