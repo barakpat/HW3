@@ -46,6 +46,10 @@
   <ItemGroup>
     <Compile Include="AirlineCommunication.cs" />
     <Compile Include="AirlineServerSoap.cs" />
+    <Compile Include="Cache.cs" />
+    <Compile Include="CacheBehavior.cs" />
+    <Compile Include="CacheInvoker.cs" />
+    <Compile Include="CacheOperation.cs" />
     <Compile Include="datatypes.cs" />
     <Compile Include="IAirlineCommunication.cs" />
     <Compile Include="IAirlineServerSoap.cs" />
