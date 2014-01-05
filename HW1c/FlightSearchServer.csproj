@@ -51,6 +51,8 @@
     <Compile Include="datatypes.cs" />
     <Compile Include="ISearchService.cs" />
     <Compile Include="ISellerService.cs" />
+    <Compile Include="LogBehavior.cs" />
+    <Compile Include="LogInvoker.cs" />
     <Compile Include="SearchService.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
