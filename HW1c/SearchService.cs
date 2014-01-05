@@ -17,7 +17,7 @@ namespace HW1c
         public ConnectionFlights GetFlights(String src, String dst, String date, String airlines)
         {
             ConnectionFlights res = new ConnectionFlights();
-            Console.WriteLine("getFlights src=" + src);
+            Console.WriteLine("getFlights src=" + src + " dst = " + dst + " date = " + date + " airlines = " + airlines);
             DateTime newDate;
             if (!this.getFlightCheckParams(src, dst, date, out newDate))
             {
