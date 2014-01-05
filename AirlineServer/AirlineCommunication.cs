@@ -1,6 +1,7 @@
 ﻿using HW1c;
 using HW3_Zookeeper;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -27,7 +28,7 @@ namespace AirlineServer
         
         // Sever data with versioning 
         //TODO this dictionary must be concurent!!!!!!!!!!!!!!
-        Dictionary<int, AirlinesFlightsData> serverData = new Dictionary<int, AirlinesFlightsData>();
+        ConcurrentDictionary<int, AirlinesFlightsData> serverData = new ConcurrentDictionary<int, AirlinesFlightsData>();
         
        // Dictionary<string, List<Flight> > airlineFlights = new Dictionary<string, List<Flight> >();
        // List<String> serverAirlines = new List<String>();
@@ -50,8 +51,10 @@ namespace AirlineServer
             if (this.currentVersion == AirlineCommunication.initialVersion)
             {
                 AirlinesFlightsData tmpAirlinesFlightsData = getCurrentPhaseDate();
-                this.serverData.Add(p, tmpAirlinesFlightsData);
-                this.serverData.Remove(this.currentVersion);
+                this.serverData.TryAdd(p, tmpAirlinesFlightsData);
+
+                AirlinesFlightsData tmoAirlinesFlightsDataRemove = new AirlinesFlightsData();
+                this.serverData.TryRemove(this.currentVersion, out tmoAirlinesFlightsDataRemove);
                 this.currentVersion = p;
                 return;
             }
@@ -61,9 +64,10 @@ namespace AirlineServer
                 
                 foreach (int key in new List<int>(this.serverData.Keys))
                 {
-                    if (key != p) this.serverData.Remove(key);
+                    AirlinesFlightsData tmp;
+                    if (key != p) this.serverData.TryRemove(key, out tmp);
                 }
-                this.printData(null, "******** Update Phase ********");
+              //  this.printData(null, "******** Update Phase ********");
                 return;
             }
             else
@@ -77,7 +81,7 @@ namespace AirlineServer
         // replication algorithm delegate method
         public List<ServerData> deleteOldData(List<ServerData> servers, String airline)
         {
-            this.printData(servers, "******** DELETE OLD DATA  - BEGIN ********");
+           // this.printData(servers, "******** DELETE OLD DATA  - BEGIN ********");
             
             
 
@@ -92,7 +96,7 @@ namespace AirlineServer
                 }
             }
 
-            this.printData(servers, "******** DELETE OLD DATA  - END ********");
+          //  this.printData(servers, "******** DELETE OLD DATA  - END ********");
            
 
             return servers;
@@ -111,7 +115,7 @@ namespace AirlineServer
             if (tmpAirlinesFlightsData == null)
             {
                 tmpAirlinesFlightsData = new AirlinesFlightsData();
-                this.serverData.Add(phase, tmpAirlinesFlightsData);
+                this.serverData.TryAdd(phase, tmpAirlinesFlightsData);
             }
             return tmpAirlinesFlightsData;
         }
@@ -122,7 +126,7 @@ namespace AirlineServer
             //delete cache
             this.cache.clearCache();
             
-            this.printData(allienceServers, " ************       Backup - begin  ******");
+           // this.printData(allienceServers, " ************       Backup - begin  ******");
             
             
             //
@@ -154,43 +158,43 @@ namespace AirlineServer
             }
             List<ServerData> newAllienceServers = calcNewAllienceServersState(allienceServers);
 
-            this.printData(allienceServers, "********Backup - END ********");
+          //  this.printData(allienceServers, "********Backup - END ********");
             
             return newAllienceServers;
         }
 
         private void printData(List<ServerData> allienceServers, String comment)
         {
-            //Console.WriteLine();
-            //Console.WriteLine();            
-            //Console.WriteLine();
-            //Console.WriteLine(comment);
-            //Console.WriteLine(comment);
-            //Console.WriteLine(comment);
-            //Console.WriteLine(" ****  Boris DATA ******");
-            //if (allienceServers != null)
-            //{
-            //    foreach (ServerData s in allienceServers)
-            //    {
-            //        Console.Write(s.airline + " - ");
-            //        ;
-            //        foreach (AirlineData a in s.airlines)
-            //        {
-            //            Console.Write(a.name + ", ");
-            //        }
-            //        Console.WriteLine();
-            //    }
-            //}
+            Console.WriteLine();
+            Console.WriteLine();
+            Console.WriteLine();
+            Console.WriteLine(comment);
+            Console.WriteLine(comment);
+            Console.WriteLine(comment);
+            Console.WriteLine(" ****  Replication Protocol DATA ******");
+            if (allienceServers != null)
+            {
+                foreach (ServerData s in allienceServers)
+                {
+                    Console.Write(s.airline + " - ");
+                    ;
+                    foreach (AirlineData a in s.airlines)
+                    {
+                        Console.Write(a.name + ", ");
+                    }
+                    Console.WriteLine();
+                }
+            }
 
-            //Console.WriteLine(" ****  BARAK DATA ******");
-            //Console.Write(this.serverName + " - ");
-            //AirlinesFlightsData tmpAirlinesFlightsData = getCurrentPhaseDate();
-            //List<String> myAirline = new List<string>(tmpAirlinesFlightsData.Keys);
-            //foreach (String airline in myAirline)
-            //{
-            //    Console.Write(airline + ", ");
-            //}
-            //Console.WriteLine();
+            Console.WriteLine(" ****  Actual Server DATA ******");
+            Console.Write(this.serverName + " - ");
+            AirlinesFlightsData tmpAirlinesFlightsData = getCurrentPhaseDate();
+            List<String> myAirline = new List<string>(tmpAirlinesFlightsData.Keys);
+            foreach (String airline in myAirline)
+            {
+                Console.Write(airline + ", ");
+            }
+            Console.WriteLine();
         }
 
         private void updateChannelsList(List<ServerData> allienceServers)
@@ -327,13 +331,13 @@ namespace AirlineServer
         public List<ServerData> balance(List<ServerData> allienceServers, List<String> airlines,  int phase)
         {
 
-            this.printData(allienceServers, "******** BALACE OLD DATA  - BEGIN ********");
+            this.printData(allienceServers, "******** After Backup Before Balance ********");
             
             
             // if there is only 1 server no need for balance
             if (allienceServers.Count == 1)
             {
-                serverData.Add(phase, getCurrentPhaseDate());
+                serverData.TryAdd(phase, getCurrentPhaseDate());
                 return allienceServers;
             } 
 
@@ -352,7 +356,7 @@ namespace AirlineServer
 
             }
 
-            this.printData(allienceServers, "******** BALACE OLD DATA  - END ********");
+            this.printData(allienceServers, "******** After Balance ********");
             
 
             return nextPhaseImage;
@@ -708,7 +712,7 @@ namespace AirlineServer
             
             AirlinesFlightsData allienceDataImage = new AirlinesFlightsData();
             allienceDataImage.Add(this.serverName, airlineFlightsData);
-            serverData.Add(this.currentVersion, allienceDataImage);
+            serverData.TryAdd(this.currentVersion, allienceDataImage);
 
             file.Close();
         }

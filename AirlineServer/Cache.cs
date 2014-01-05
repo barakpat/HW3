@@ -25,7 +25,7 @@ namespace AirlineServer
         {
             lock (cacheLock)
             {
-                //Console.WriteLine("Cache had been cleared!");
+                Console.WriteLine("cleare cache!");
                 hash.Clear();
                 queue.Clear();
             }
@@ -45,7 +45,7 @@ namespace AirlineServer
                     deleteOldest();
                 }
 
-                Console.WriteLine("date inserted into the cache!" );
+                Console.WriteLine("query inserted into the cache!" );
                 hash.Add(item.key, item);
                 queue.Enqueue(item);
             }
@@ -63,7 +63,7 @@ namespace AirlineServer
                     
                 result = (CasheItem)hash[key];
             }
-            Console.WriteLine("data retrievded from the cache!");
+            Console.WriteLine("query result retrievded from the cache!");
             return result.flights;
         }   
 
