@@ -28,6 +28,7 @@ namespace AirlineServer
 
         public object Invoke(object instance, object[] inputs, out object[] outputs)
         {
+
             outputs = new object[1];
             outputs[0] = new object();
 
